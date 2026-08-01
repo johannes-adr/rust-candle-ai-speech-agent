@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sprach-Agent</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; padding: 2rem 1rem;
+    background: #14161a; color: #e6e6e6;
+    font: 15px/1.5 system-ui, sans-serif;
+  }
+  main { max-width: 42rem; margin: 0 auto; }
+  h1 { font-size: 1.25rem; font-weight: 600; margin: 0 0 1.25rem; }
+  .tabs { display: flex; gap: .5rem; margin-bottom: 1.25rem; }
+  button {
+    background: #23272e; color: #e6e6e6;
+    border: 1px solid #363b44; border-radius: 6px;
+    padding: .5rem .9rem; font: inherit; cursor: pointer;
+  }
+  button:hover { background: #2b3038; }
+  button:disabled { opacity: .5; cursor: default; }
+  button.aktiv { background: #3a5bd9; border-color: #3a5bd9; }
+  textarea {
+    width: 100%; box-sizing: border-box; min-height: 7rem;
+    background: #1b1e24; color: #e6e6e6;
+    border: 1px solid #363b44; border-radius: 6px;
+    padding: .6rem; font: inherit; resize: vertical;
+  }
+  .panel { display: none; }
+  .panel.aktiv { display: block; }
+  .status { margin: 1rem 0; color: #9aa3b0; min-height: 1.5em; }
+  .fehler { color: #ff8080; white-space: pre-wrap; }
+  .ausgabe { margin-top: 1.25rem; }
+  .ausgabe h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em;
+                color: #9aa3b0; margin: 1rem 0 .35rem; font-weight: 600; }
+  .box {
+    background: #1b1e24; border: 1px solid #2b3038; border-radius: 6px;
+    padding: .6rem .7rem; min-height: 1.5em; white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Sprach-Agent</h1>
+
+  <div class="tabs">
+    <button id="tabS2s" class="aktiv">Speech-to-Speech</button>
+    <button id="tabTts">Text-to-Speech</button>
+  </div>
+
+  <section id="panelS2s" class="panel aktiv">
+    <button id="aufnahmeBtn">Aufnehmen</button>
+  </section>
+
+  <section id="panelTts" class="panel">
+    <textarea id="text" placeholder="Text eingeben …"></textarea>
+    <p><button id="sprechenBtn">Sprechen</button></p>
+  </section>
+
+  <p id="status" class="status"></p>
+  <p id="fehler" class="fehler"></p>
+
+  <div class="ausgabe">
+    <h2>Du</h2>
+    <div id="transkript" class="box"></div>
+    <h2>Antwort</h2>
+    <div id="antwort" class="box"></div>
+  </div>
+</main>
+
+<script>
+// ── Elemente ────────────────────────────────────────────────────────────────
+const el = (id) => document.getElementById(id);
+const statusEl = el('status'), fehlerEl = el('fehler');
+const transkriptEl = el('transkript'), antwortEl = el('antwort');
+const aufnahmeBtn = el('aufnahmeBtn'), sprechenBtn = el('sprechenBtn');
+
+const setStatus = (t) => { statusEl.textContent = t; };
+const setFehler = (t) => { fehlerEl.textContent = t; };
+
+// ── Modus-Umschaltung ───────────────────────────────────────────────────────
+function modus(s2s) {
+  el('tabS2s').classList.toggle('aktiv', s2s);
+  el('tabTts').classList.toggle('aktiv', !s2s);
+  el('panelS2s').classList.toggle('aktiv', s2s);
+  el('panelTts').classList.toggle('aktiv', !s2s);
+}
+el('tabS2s').onclick = () => modus(true);
+el('tabTts').onclick = () => modus(false);
+
+// ── Abspielwarteschlange ────────────────────────────────────────────────────
+// Die Pipeline liefert Satz für Satz Audio. Statt auf alles zu warten, landet
+// jeder Chunk in einer Queue; es läuft immer nur EIN Audio-Element, und dessen
+// 'ended' startet den nächsten Chunk — dadurch lückenlose Wiedergabe.
+const queue = [];
+let spieltGerade = false;
+const player = new Audio();
+player.addEventListener('ended', naechsterChunk);
+player.addEventListener('error', naechsterChunk); // defekter Chunk blockiert nicht
+
+function naechsterChunk() {
+  if (player.src) URL.revokeObjectURL(player.src);
+  const blob = queue.shift();
+  if (!blob) { spieltGerade = false; player.removeAttribute('src'); return; }
+  spieltGerade = true;
+  player.src = URL.createObjectURL(blob);
+  // Scheitert das Abspielen (typischerweise die Autoplay-Sperre), sonst still
+  // die ganze Antwort verschluckt würde — deshalb sichtbar melden.
+  player.play().catch((e) => {
+    setFehler('Wiedergabe blockiert (' + e.name + ') — einmal auf die Seite klicken.');
+    naechsterChunk();
+  });
+}
+
+function audioEinreihen(base64) {
+  const roh = atob(base64);
+  const bytes = new Uint8Array(roh.length);
+  for (let i = 0; i < roh.length; i++) bytes[i] = roh.charCodeAt(i);
+  queue.push(new Blob([bytes], { type: 'audio/wav' }));
+  if (!spieltGerade) naechsterChunk();
+}
+
+// ── SSE-Antwort eines fetch()-POST lesen ────────────────────────────────────
+// fetch() kennt keinen EventSource, also selbst puffern und an \n\n splitten.
+async function sseLesen(response) {
+  if (!response.ok) throw new Error('Server: HTTP ' + response.status);
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let puffer = '';
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    puffer += decoder.decode(value, { stream: true });
+
+    let grenze;
+    while ((grenze = puffer.indexOf('\n\n')) !== -1) {
+      const block = puffer.slice(0, grenze);
+      puffer = puffer.slice(grenze + 2); // Rest bleibt gepuffert (Teilblock)
+      for (const zeile of block.split('\n')) {
+        if (!zeile.startsWith('data:')) continue;
+        try { ereignis(JSON.parse(zeile.slice(5).trim())); }
+        catch (e) { setFehler('Ungültiges Event: ' + e.message); }
+      }
+    }
+  }
+}
+
+function ereignis(ev) {
+  if (ev.type === 'transcript') transkriptEl.textContent = ev.text;
+  else if (ev.type === 'delta') antwortEl.textContent += ev.text;
+  else if (ev.type === 'audio') audioEinreihen(ev.wav);
+  else if (ev.type === 'error') setFehler('Fehler: ' + ev.message);
+  else if (ev.type === 'done') setStatus('Fertig');
+}
+
+// ── Text-to-Speech ──────────────────────────────────────────────────────────
+sprechenBtn.onclick = async () => {
+  const text = el('text').value.trim();
+  if (!text) return;
+  transkriptEl.textContent = ''; antwortEl.textContent = ''; setFehler('');
+  sprechenBtn.disabled = true;
+  setStatus('Denke nach …');
+  try {
+    const res = await fetch('/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      body: text,
+    });
+    await sseLesen(res);
+  } catch (e) {
+    setFehler('Fehler: ' + e.message); setStatus('');
+  } finally {
+    sprechenBtn.disabled = false;
+  }
+};
+
+// ── Aufnahme (Speech-to-Speech) ─────────────────────────────────────────────
+let zielRate = 16000;
+fetch('/api/config')
+  .then((r) => r.json())
+  .then((c) => { zielRate = c.sample_rate; })
+  .catch(() => {});
+
+let stream = null, audioCtx = null, node = null, quelle = null;
+let bloecke = [], laeuft = false;
+
+aufnahmeBtn.onclick = () => (laeuft ? stoppen() : starten());
+
+async function starten() {
+  transkriptEl.textContent = ''; antwortEl.textContent = ''; setFehler('');
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (e) {
+    setFehler('Kein Mikrofonzugriff: ' + e.message);
+    return;
+  }
+  audioCtx = new AudioContext();
+  quelle = audioCtx.createMediaStreamSource(stream);
+  // ScriptProcessor ist deprecated, läuft aber überall und ist hier deutlich
+  // kürzer als ein AudioWorklet — wir brauchen nur rohe Float32-Blöcke.
+  node = audioCtx.createScriptProcessor(4096, 1, 1);
+  bloecke = [];
+  node.onaudioprocess = (e) => {
+    // Kopieren: der Puffer wird vom Browser wiederverwendet.
+    bloecke.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+  };
+  quelle.connect(node);
+  node.connect(audioCtx.destination); // ohne Ziel feuert onaudioprocess nicht
+
+  laeuft = true;
+  aufnahmeBtn.textContent = 'Stopp';
+  setStatus('Aufnahme läuft');
+}
+
+async function stoppen() {
+  laeuft = false;
+  aufnahmeBtn.textContent = 'Aufnehmen';
+  aufnahmeBtn.disabled = true;
+
+  node.disconnect(); quelle.disconnect();
+  stream.getTracks().forEach((t) => t.stop());
+  const quellRate = audioCtx.sampleRate;
+  await audioCtx.close();
+
+  // Blöcke zu einem durchgehenden Signal zusammenfügen …
+  const gesamt = bloecke.reduce((n, b) => n + b.length, 0);
+  const roh = new Float32Array(gesamt);
+  let pos = 0;
+  for (const b of bloecke) { roh.set(b, pos); pos += b.length; }
+  bloecke = [];
+
+  const pcm = resample(roh, quellRate, zielRate);
+  if (pcm.length === 0) {
+    setFehler('Nichts aufgenommen.'); setStatus(''); aufnahmeBtn.disabled = false;
+    return;
+  }
+  setStatus('Denke nach …');
+  try {
+    const res = await fetch('/api/s2s', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/octet-stream' },
+      body: pcm.buffer, // rohes little-endian f32, mono
+    });
+    await sseLesen(res);
+  } catch (e) {
+    setFehler('Fehler: ' + e.message); setStatus('');
+  } finally {
+    aufnahmeBtn.disabled = false;
+  }
+}
+
+// Lineare Interpolation zwischen den beiden Nachbar-Samples — für Sprache
+// völlig ausreichend und ohne Filter-Aufwand.
+function resample(input, von, nach) {
+  if (von === nach || input.length === 0) return input;
+  const verhaeltnis = von / nach;
+  const laenge = Math.floor(input.length / verhaeltnis);
+  const out = new Float32Array(laenge);
+  for (let i = 0; i < laenge; i++) {
+    const p = i * verhaeltnis;
+    const i0 = Math.floor(p);
+    const i1 = Math.min(i0 + 1, input.length - 1);
+    const t = p - i0;
+    out[i] = input[i0] * (1 - t) + input[i1] * t;
+  }
+  return out;
+}
+</script>
+</body>
+</html>
