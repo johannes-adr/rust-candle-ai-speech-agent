@@ -1,0 +1,18 @@
+[package]
+name = "rust-candle-ai-speech-agent"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1"
+# Crane = Candle-basierte Inferenz-Engine (Qwen3-TTS: TTS + Voice Cloning).
+# `crane`      -> WAV laden/speichern
+# `crane-core` -> das eigentliche Modell
+crane = { git = "https://github.com/lucasjinreal/Crane", features = [
+    "metal",
+    "accelerate",
+] }
+crane-core = { git = "https://github.com/lucasjinreal/Crane" }
+
+[profile.release]
+opt-level = 3

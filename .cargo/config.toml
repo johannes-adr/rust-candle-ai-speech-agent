@@ -1,0 +1,7 @@
+# candle-core 0.11 nutzt auf Apple Silicon NEON-f16-Intrinsics, die auf
+# stable Rust noch unstable sind (`stdarch_neon_f16`, rust#136306).
+# Ohne das Target-Feature fällt candle auf den generischen f16-Pfad zurück
+# und alles baut auf stable. Rechnerisch irrelevant: dieses Beispiel läuft
+# in f32 auf Metal.
+[build]
+rustflags = ["-C", "target-feature=-fp16"]
