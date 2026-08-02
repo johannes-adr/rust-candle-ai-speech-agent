@@ -123,8 +123,40 @@ voices/
 
 Dieselbe Konvention wie beim CLI-Aufruf, also lassen sich Stimmen auch von Hand
 hineinkopieren — das Verzeichnis wird bei jeder Abfrage neu gelesen, ein
-Neustart ist nicht nötig. In der UI erscheinen sie als Dropdown; eine frisch
-hochgeladene Referenz kann über „Speichern unter" direkt abgelegt werden.
+Neustart ist nicht nötig.
+
+In der UI erscheinen die Stimmen als Dropdown. Eine neue Referenz kannst du
+dort **direkt mit dem Mikrofon aufnehmen** (oder eine WAV-Datei wählen),
+gegenhören und über „Speichern unter" ablegen; ausgewählte Stimmen lassen sich
+per Knopf wieder löschen (mit Rückfrage — das Löschen entfernt beide Dateien
+und ist endgültig).
+
+Die Aufnahme wird bewusst **nicht** im Browser resampled: sie geht mit der
+nativen Rate der Soundkarte (meist 48 kHz) als WAV zum Server, der sie dann auf
+die Rate des Modells bringt. Der Server benutzt dafür `rubato` und resampelt
+bandbegrenzt; ein Downsampling im Browser wäre nur lineare Interpolation, also
+schlechter.
+
+Die hohe Rate kostet nichts außer Bytes — gemessen an derselben 10-s-Aufnahme:
+
+| Rate   | JSON-Body | erstes Audio |
+| ------ | --------- | ------------ |
+| 48 kHz | 1,22 MB   | 8,48 s       |
+| 24 kHz | 0,62 MB   | 9,82 s       |
+| 16 kHz | 0,41 MB   | 8,45 s       |
+
+**Was zählt, ist die Länge der Referenz**, nicht ihre Rate. Voice Cloning hat
+in Crane keinen Streaming-Pfad, und der Speaker-Encoder rechnet die ganze
+Aufnahme durch:
+
+| Referenz | erstes Audio |
+| -------- | ------------ |
+| 5 s      | 6,45 s       |
+| 10 s     | 9,57 s       |
+| 30 s     | 22,97 s      |
+
+Länger als ~15 s macht den Klon nicht besser, nur langsam — die UI weist ab
+dieser Grenze darauf hin.
 
 Stimmnamen dürfen nur Buchstaben, Ziffern, `-` und `_` enthalten. Das ist keine
 Kosmetik: der Name kommt aus einer HTTP-Anfrage und landet in einem Dateipfad.
@@ -194,6 +226,7 @@ Alles über Umgebungsvariablen, Defaults in [src/main.rs](src/main.rs):
 | `TTS_DTYPE`    | `f32`                                       | `f16` spart Speicher, siehe unten           |
 | `ASR_DTYPE`    | `f16`                                       | `f32` kostet ~1,5 GB mehr                   |
 | `TTS_STREAM`   | `1`                                         | `0` = ganzer Satz am Stück, siehe unten     |
+| `CHUNK_AT`     | `.!?`                                       | Trennzeichen fürs Chunking; leer = aus      |
 | `LLM_REASONING`| `none`                                      | Denkphase; `low`/`medium`/`high` schalten sie an |
 
 Der Agent spricht mit geklonter Stimme, sobald beide Referenz-Variablen gesetzt
@@ -232,6 +265,37 @@ ist das der richtige Tausch, für langes Vorlesen nicht: dann `TTS_STREAM=0`.
 Voice Cloning hat in Crane keinen Streaming-Pfad und liefert immer den ganzen
 Satz.
 
+**Das Chunking ist einstellbar.** Standard sind `.`, `!`, `?`. Über `CHUNK_AT`
+(bzw. die Checkboxen in der UI) lässt sich das ändern:
+
+| Einstellung | Wirkung |
+| ----------- | ------- |
+| `.!?` (Standard) | Trennung an Satzgrenzen |
+| `.,!?`      | zusätzlich am Komma — mehr, kürzere Chunks |
+| *(leer)*    | kein Chunking, der ganze Text am Stück |
+
+Der Tausch ist **Betonung gegen Latenz**: Das Modell vertont jedes Bruchstück
+einzeln und kennt den Satzbogen nicht mehr, je kleiner die Stücke werden.
+Gemessen an einem Zwei-Satz-Text (8,2 s Ton):
+
+```
+.!?     7 Chunks | erstes Audio nach 0,88 s | gesamt 15,6 s
+.,!?    8 Chunks | erstes Audio nach 1,08 s | gesamt 16,2 s
+(leer)  5 Chunks | erstes Audio nach 1,08 s | gesamt 13,8 s
+```
+
+Der Komma-Trenner lohnt sich hier also nicht — er kostet Betonung *und* Zeit,
+weil jeder zusätzliche Schnitt den Vokoder-Kontext neu aufbaut. Interessant
+wird er erst bei sehr langen Sätzen ohne Punkt. Umgekehrt ist „aus" insgesamt
+am schnellsten, weil gar nichts doppelt dekodiert wird — dafür hört man bei
+langen Texten länger nichts.
+
+Die Ziffernregel greift für jedes Trennzeichen: `19.99` bleibt zusammen, und
+mit Komma-Trenner auch das deutsche `19,99`.
+
+Im Speech-to-Speech-Modus gilt immer die Server-Einstellung — dort geht rohes
+PCM zum Server, es gibt keinen JSON-Rahmen für eine Übersteuerung.
+
 **LLM und TTS sind entkoppelt.** Die Satzerkennung läuft in einem eigenen Task
 und schiebt fertige Sätze in eine Warteschlange; die Synthese arbeitet sie
 nebenher ab. Sonst stünde das Lesen der LLM-Token still, solange ein Satz
@@ -268,6 +332,7 @@ umstellbar.
 | `GET /`        | —                                           | WebUI                      |
 | `GET /api/config` | —                                        | Fähigkeiten, siehe unten   |
 | `GET /api/voices` | —                                        | `["johannes", "oma"]`      |
+| `DELETE /api/voices/{name}` | —                              | Liste danach (404 unbekannt)|
 | `POST /api/tts`| JSON, siehe unten                           | SSE                        |
 | `POST /api/s2s`| rohes Mono-PCM, little-endian `f32`, 16 kHz | SSE (409 bei `MODE=tts`)   |
 
@@ -280,7 +345,8 @@ umstellbar.
   "languages": ["auto", "chinese", "english", "french", "german", "…"],
   "voices": ["aiden", "dylan", "eric", "ono_anna", "ryan", "serena", "…"],
   "voice_cloning": false,
-  "saved_voices": ["johannes", "oma"]
+  "saved_voices": ["johannes", "oma"],
+  "chunk_at": ".!?"
 }
 ```
 
@@ -294,9 +360,14 @@ umstellbar.
   "voice": "johannes",
   "reference_wav": "<base64 einer WAV-Datei>",
   "reference_text": "Transkript der Referenz",
-  "save_as": "johannes"
+  "save_as": "johannes",
+  "chunk_at": ".,!?"
 }
 ```
+
+`chunk_at` weglassen = Server-Einstellung; `""` = Chunking für diese Anfrage
+aus. Der leere String ist also eine echte Angabe und nicht dasselbe wie ein
+fehlendes Feld.
 
 `voice` (gespeicherte Stimme) und `reference_wav`/`reference_text` (frische
 Referenz) schließen sich aus — beides zusammen ist ein 400, statt dass der

@@ -26,19 +26,33 @@ use axum::extract::State;
 use axum::http::{StatusCode, header};
 use axum::response::sse::{Event as SseEvent, Sse};
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post};
+use axum::extract::{DefaultBodyLimit, Path};
+use axum::routing::{delete, get, post};
 use base64::Engine;
 use futures_util::stream::{Stream, StreamExt};
 use serde::Deserialize;
 use serde_json::json;
 use tokio::sync::mpsc;
 
-use crate::pipeline::{Event, Pipeline};
+use crate::pipeline::{Chunking, Event, Pipeline};
 use crate::tts::{Reference, SpeechRequest};
 use crate::voices::VoiceStore;
 
 /// Das komplette Frontend — eine Datei, alles inline.
 const INDEX_HTML: &str = include_str!("../static/index.html");
+
+/// Obergrenze für Request-Bodies.
+///
+/// axum begrenzt standardmäßig auf 2 MB, und das ist hier zu wenig: eine
+/// 30-Sekunden-Referenz in 48 kHz Mono sind 2,75 MB WAV und als Base64 im
+/// JSON 3,66 MB — knapp 16 Sekunden wären das Maximum gewesen. Dasselbe gilt
+/// für `/api/s2s`, wo rohes `f32` bei 16 kHz nach gut 33 Sekunden Sprache
+/// anschlägt.
+///
+/// 64 MB entsprechen rund acht Minuten Referenz-Audio. Der Server ist an
+/// `127.0.0.1` gebunden und für den lokalen Gebrauch gedacht, deshalb ist die
+/// großzügige Grenze vertretbar.
+const MAX_BODY_BYTES: usize = 64 * 1024 * 1024;
 
 /// Was die Handler brauchen: die Pipeline und die Ablage gespeicherter
 /// Stimmen. Getrennt gehalten, weil die Ablage nichts mit dem Datenfluss
@@ -59,8 +73,10 @@ pub async fn serve(
         .route("/", get(index))
         .route("/api/config", get(config))
         .route("/api/voices", get(voices_list))
+        .route("/api/voices/{name}", delete(voice_delete))
         .route("/api/tts", post(tts))
         .route("/api/s2s", post(s2s))
+        .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
         .with_state(AppState { pipeline, voices });
 
     let listener = tokio::net::TcpListener::bind(addr)
@@ -104,6 +120,7 @@ async fn config(State(state): State<AppState>) -> impl IntoResponse {
         "voices": caps.speakers,
         "voice_cloning": caps.cloning,
         "saved_voices": state.voices.list(),
+        "chunk_at": state.pipeline.chunking().as_string(),
     }))
 }
 
@@ -113,6 +130,24 @@ async fn config(State(state): State<AppState>) -> impl IntoResponse {
 /// Speichern einer neuen Stimme lädt das Frontend nur diese Liste neu.
 async fn voices_list(State(state): State<AppState>) -> impl IntoResponse {
     axum::Json(state.voices.list())
+}
+
+/// `DELETE /api/voices/{name}` — eine gespeicherte Stimme entfernen.
+///
+/// Antwortet mit der aktualisierten Liste, damit das Frontend sein Dropdown
+/// ohne zweite Anfrage neu aufbauen kann.
+async fn voice_delete(State(state): State<AppState>, Path(name): Path<String>) -> Response {
+    match state.voices.delete(&name) {
+        Ok(true) => axum::Json(state.voices.list()).into_response(),
+        Ok(false) => (
+            StatusCode::NOT_FOUND,
+            format!("Stimme '{name}' gibt es nicht."),
+        )
+            .into_response(),
+        // Einziger Fehlerfall von `delete` neben E/A ist ein unzulässiger
+        // Name — und der ist ein Fehler des Aufrufers.
+        Err(e) => bad_request(format!("{e:#}")),
+    }
 }
 
 /// Body von `POST /api/tts`.
@@ -138,6 +173,13 @@ struct TtsRequest {
     /// Die hochgeladene Referenz unter diesem Namen ablegen.
     #[serde(default)]
     save_as: Option<String>,
+    /// Zeichen, an denen für diese Anfrage in Sätze zerlegt wird.
+    ///
+    /// Weglassen = Server-Voreinstellung; `""` = kein Chunking. Deshalb hier
+    /// **kein** [`normalize`]: der leere String ist eine echte Angabe und darf
+    /// nicht zu „nicht gesetzt" werden.
+    #[serde(default)]
+    chunk_at: Option<String>,
 }
 
 /// `POST /api/tts` — Body ist JSON ([`TtsRequest`]), Antwort ein SSE-Stream.
@@ -210,7 +252,8 @@ async fn tts(State(state): State<AppState>, axum::Json(req): axum::Json<TtsReque
         reference,
     };
 
-    sse_from(pipeline.text_to_speech(request)).into_response()
+    let chunking = req.chunk_at.as_deref().map(Chunking::parse);
+    sse_from(pipeline.text_to_speech(request, chunking)).into_response()
 }
 
 /// HTTP 400 mit deutschsprachiger Meldung im Body.

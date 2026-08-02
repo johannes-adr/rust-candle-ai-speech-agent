@@ -35,7 +35,7 @@ use crane_core::generation::SpeechOptions;
 use crane_core::models::{DType, Device};
 
 use crate::llm::Llm;
-use crate::pipeline::Pipeline;
+use crate::pipeline::{Chunking, Pipeline};
 use crate::stt::Stt;
 use crate::tts::{AudioChunk, Reference, SpeechRequest, Tts, TtsConfig};
 use crate::voices::VoiceStore;
@@ -59,6 +59,11 @@ const LLM_MODEL: &str = "gemma4:e2b";
 /// `"low"`/`"medium"`/`"high"` setzen.
 const LLM_REASONING: &str = "none";
 const BIND: &str = "127.0.0.1:8080";
+/// Zeichen, an denen vor der Synthese in Sätze zerlegt wird.
+///
+/// Mehr Zeichen (z. B. `.,!?`) heißt früherer Ton, aber zerhacktere Betonung;
+/// leer schaltet das Chunking ab und wartet auf den kompletten Text.
+const CHUNK_AT: &str = ".!?";
 
 const SYSTEM_PROMPT: &str = "Du bist ein gesprochener Assistent. Antworte auf Deutsch, \
 kurz und in vollständigen Sätzen. Keine Aufzählungen, keine Formatierung, keine Emojis \
@@ -211,7 +216,17 @@ async fn serve(device: Device) -> Result<()> {
         }
     );
 
-    let pipeline = Arc::new(Pipeline::new(stt, llm, tts, SYSTEM_PROMPT));
+    let chunking = Chunking::parse(&env_or("CHUNK_AT", CHUNK_AT));
+    println!(
+        "Chunking  : {}",
+        if chunking.enabled() {
+            chunking.as_string()
+        } else {
+            "aus (ganzer Text am Stück)".to_string()
+        }
+    );
+
+    let pipeline = Arc::new(Pipeline::new(stt, llm, tts, SYSTEM_PROMPT, chunking));
 
     let addr = env_or("BIND", BIND)
         .parse()

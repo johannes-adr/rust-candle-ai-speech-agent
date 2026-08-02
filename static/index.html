@@ -39,6 +39,27 @@
   .zeile { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: .75rem; }
   .feld { display: flex; flex-direction: column; gap: .25rem; }
   .feld > span { font-size: .8rem; color: #9aa3b0; }
+  /* Checkbox-Reihe für die Chunking-Trennzeichen. */
+  .chunkGruppe { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+  .chunkGruppe label {
+    display: flex; align-items: center; gap: .4rem;
+    background: #1b1e24; border: 1px solid #363b44; border-radius: 6px;
+    padding: .3rem .6rem; cursor: pointer;
+  }
+  .chunkGruppe label:hover { border-color: #4a515c; }
+  .chunkGruppe input { accent-color: #3a5bd9; margin: 0; }
+  /* Ein „," als Beschriftung wäre winzig — deshalb groß und monospace. */
+  .chunkGruppe .zeichen {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 1.15rem; line-height: 1; min-width: .8em; text-align: center;
+  }
+  /* Alles abgewählt ist die überraschende Einstellung — die fällt so auf.
+     Die Selektoren sind bewusst spitz, sonst gewinnen .feld > span bzw.
+     .hinweis mit ihrer Standardfarbe. */
+  .feld > span.chunkAus, p.hinweis.chunkAus { color: #e0b060; }
+  #chunkHinweis { margin-top: .45rem; }
+  /* Gleiche Warnfarbe für „Referenz ist unnötig lang". */
+  .warnung { color: #e0b060; }
   .klon { margin-top: 1rem; padding-top: .9rem; border-top: 1px solid #2b3038; }
   .klon h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em;
              color: #9aa3b0; margin: 0 0 .35rem; font-weight: 600; }
@@ -48,6 +69,14 @@
   .hinweis { color: #9aa3b0; font-size: .85rem; margin: 0 0 .7rem; }
   input[type=file] { font: inherit; color: #9aa3b0; display: block; margin-bottom: .7rem; }
   textarea.klein { min-height: 3.5rem; }
+  button.klein { padding: .3rem .6rem; font-size: .85rem; }
+  /* Dropdown „Gespeicherte Stimme" und der Löschen-Knopf stehen nebeneinander. */
+  .stimmeZeile { display: flex; align-items: flex-end; gap: .5rem; margin-bottom: .7rem; }
+  .klon .stimmeZeile .feld { margin-bottom: 0; }
+  /* Aufnahmeknopf plus laufende Sekundenanzeige. */
+  .aufnahmeZeile { display: flex; align-items: center; gap: .6rem; margin: 0 0 .7rem; }
+  #referenzQuelle { display: flex; align-items: center; gap: .6rem; }
+  #referenzVorschau { display: block; width: 100%; max-width: 22rem; margin-bottom: .7rem; }
   .status { margin: 1rem 0; color: #9aa3b0; min-height: 1.5em; }
   .fehler { color: #ff8080; white-space: pre-wrap; }
   .ausgabe { margin-top: 1.25rem; }
@@ -87,20 +116,54 @@
       </label>
     </div>
 
+    <!-- Steuert, an welchen Zeichen der Server den Text vor der Synthese
+         zerlegt. Gehört nur hierher: Speech-to-Speech schickt rohes PCM ohne
+         JSON-Rahmen und bleibt deshalb bei der Server-Einstellung.
+         Die Vorbelegung hier entspricht dem üblichen Server-Default und wird
+         von /api/config überschrieben, sobald die da ist. -->
+    <div class="zeile">
+      <div class="feld">
+        <span id="chunkLabel">Chunking (Trennzeichen)</span>
+        <div id="chunkGruppe" class="chunkGruppe">
+          <label><input type="checkbox" data-zeichen="." checked><span class="zeichen">.</span></label>
+          <label><input type="checkbox" data-zeichen=","><span class="zeichen">,</span></label>
+          <label><input type="checkbox" data-zeichen="!" checked><span class="zeichen">!</span></label>
+          <label><input type="checkbox" data-zeichen="?" checked><span class="zeichen">?</span></label>
+        </div>
+      </div>
+    </div>
+    <p id="chunkHinweis" class="hinweis"></p>
+
     <!-- Nur beim Base-Checkpoint sichtbar (voice_cloning: true). -->
     <div id="klonFeld" class="klon" style="display:none">
       <h2>Voice Cloning</h2>
 
       <!-- Nur sichtbar, wenn der Server überhaupt gespeicherte Stimmen kennt. -->
-      <label id="gespeicherteStimmeFeld" class="feld" style="display:none">
-        <span>Gespeicherte Stimme</span>
-        <select id="gespeicherteStimme"></select>
-      </label>
+      <div id="gespeicherteStimmeFeld" class="stimmeZeile" style="display:none">
+        <label class="feld">
+          <span>Gespeicherte Stimme</span>
+          <select id="gespeicherteStimme"></select>
+        </label>
+        <!-- Nur bei einer echten gespeicherten Stimme, nie beim Upload-Eintrag. -->
+        <button id="stimmeLoeschenBtn" class="klein" style="display:none">Löschen</button>
+      </div>
 
       <!-- Der Upload-Zweig: verborgen, sobald eine gespeicherte Stimme gewählt ist. -->
       <div id="klonUpload">
-        <p class="hinweis">~5–15 s saubere Aufnahme, Transkript muss exakt passen.</p>
+        <p class="hinweis">~5–15 s saubere Aufnahme, Transkript muss exakt passen.
+          Referenz hier direkt aufnehmen oder als WAV-Datei wählen — beides zusammen
+          geht nicht, es gilt immer das zuletzt Erzeugte.</p>
+        <p class="aufnahmeZeile">
+          <button id="referenzAufnahmeBtn">Referenz aufnehmen</button>
+          <span id="referenzTimer" class="hinweis" style="display:none; margin:0"></span>
+        </p>
         <input id="referenzDatei" type="file" accept=".wav,audio/wav">
+        <p id="referenzQuelle" class="hinweis" style="display:none">
+          <span id="referenzQuelleText"></span>
+          <button id="referenzVerwerfenBtn" class="klein">Verwerfen</button>
+        </p>
+        <!-- Zum Gegenhören der eigenen Aufnahme (bei Datei-Auswahl verborgen). -->
+        <audio id="referenzVorschau" controls style="display:none"></audio>
         <textarea id="referenzText" class="klein" placeholder="Transkript der Referenz-Aufnahme …"></textarea>
         <label class="feld" style="margin-top:.7rem">
           <span>Speichern unter (optional)</span>
@@ -360,6 +423,163 @@ function dateiAlsBase64(datei) {
   });
 }
 
+// ── Referenz direkt aufnehmen (Voice Cloning) ───────────────────────────────
+// Zweiter Weg neben dem Datei-Upload. Aufgenommen wird mit demselben Rekorder
+// wie bei Speech-to-Speech, nur landet das Ergebnis nicht beim Server, sondern
+// als fertige WAV in `referenzAufnahme`.
+//
+// Bewusst OHNE Resampling: die native Rate der Aufnahme (typisch 48000) wandert
+// unverändert in den WAV-Header. Der Server bringt die Referenz ohnehin auf die
+// Rate, die das Modell braucht — ein zusätzliches Resampling hier wäre nur
+// vermeidbarer Qualitätsverlust.
+let referenzAufnahme = null;  // { bytes: Uint8Array, dauer: Sekunden }
+let referenzUrl = null;       // Blob-URL der Vorschau, wird beim Ersetzen freigegeben
+let referenzLaeuft = false, referenzTicker = null, referenzStart = 0;
+
+// „8,2 s" — Dezimalkomma, wie im Deutschen üblich.
+const sekunden = (n) => n.toFixed(1).replace('.', ',') + ' s';
+
+// Float32 [-1,1] → 16-bit-PCM mono, mit dem kanonischen Header davor.
+function wavAusSamples(samples, rate) {
+  const pcm = new Uint8Array(samples.length * 2);
+  const view = new DataView(pcm.buffer);
+  for (let i = 0; i < samples.length; i++) {
+    // Clampen: alles außerhalb [-1,1] würde beim Skalieren überlaufen.
+    const wert = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(i * 2, Math.round(wert * 32767), true);
+  }
+  const kopf = wavKopf(pcm.length, { kanaele: 1, rate, bits: 16 });
+  const datei = new Uint8Array(kopf.length + pcm.length);
+  datei.set(kopf, 0);
+  datei.set(pcm, kopf.length);
+  return datei;
+}
+
+// Nur die Aufnahme (samt Vorschau) wegwerfen — die Datei-Auswahl bleibt.
+function aufnahmeWegwerfen() {
+  referenzAufnahme = null;
+  if (referenzUrl) { URL.revokeObjectURL(referenzUrl); referenzUrl = null; }
+  el('referenzVorschau').removeAttribute('src');
+}
+
+// Aufnahme und Datei sind Alternativen — es gilt immer die zuletzt entstandene.
+// Diese Anzeige sagt, welche das gerade ist.
+function referenzAnzeigeAktualisieren() {
+  const datei = el('referenzDatei').files[0];
+  const feld = el('referenzQuelleText');
+  if (referenzAufnahme) {
+    feld.textContent = 'Verwendet: Aufnahme (' + sekunden(referenzAufnahme.dauer) + ')';
+    // Länger als ~15 s macht den Klon nicht besser, kostet aber spürbar Zeit:
+    // Voice Cloning kann nicht streamen, und der Speaker-Encoder rechnet die
+    // ganze Referenz durch (gemessen: 5 s → 6,5 s, 30 s → 23 s bis zum Ton).
+    const langsam = referenzAufnahme.dauer > 15;
+    if (langsam) feld.textContent += ' — länger als nötig, das bremst nur';
+    feld.classList.toggle('warnung', langsam);
+  } else if (datei) {
+    feld.textContent = 'Verwendet: ' + datei.name;
+    feld.classList.remove('warnung');
+  }
+  zeigen(el('referenzQuelle'), !!(referenzAufnahme || datei));
+  zeigen(el('referenzVorschau'), !!referenzAufnahme);
+}
+
+// „Verwerfen" stellt auf gar keine Referenz zurück.
+el('referenzVerwerfenBtn').onclick = () => {
+  aufnahmeWegwerfen();
+  el('referenzDatei').value = '';
+  referenzAnzeigeAktualisieren();
+};
+
+el('referenzDatei').onchange = () => {
+  // Eine frisch gewählte Datei schlägt eine vorhandene Aufnahme.
+  if (el('referenzDatei').files[0]) aufnahmeWegwerfen();
+  referenzAnzeigeAktualisieren();
+};
+
+el('referenzAufnahmeBtn').onclick = () =>
+  (referenzLaeuft ? referenzStoppen() : referenzStarten());
+
+async function referenzStarten() {
+  setFehler('');
+  try {
+    await rekorderStarten();
+  } catch (e) {
+    setFehler('Kein Mikrofonzugriff: ' + e.message);
+    return;
+  }
+  referenzLaeuft = true;
+  referenzStart = Date.now();
+  el('referenzAufnahmeBtn').textContent = 'Aufnahme stoppen';
+  // Während der Aufnahme gibt es nichts zu sprechen — die Referenz ist ja
+  // noch gar nicht fertig.
+  sprechenBtn.disabled = true;
+  zeigen(el('referenzTimer'), true);
+  const tick = () => {
+    el('referenzTimer').textContent =
+      'Aufnahme läuft … ' + sekunden((Date.now() - referenzStart) / 1000);
+  };
+  tick();
+  referenzTicker = setInterval(tick, 100);
+}
+
+async function referenzStoppen() {
+  referenzLaeuft = false;
+  clearInterval(referenzTicker); referenzTicker = null;
+  zeigen(el('referenzTimer'), false);
+  el('referenzAufnahmeBtn').textContent = 'Referenz aufnehmen';
+  el('referenzAufnahmeBtn').disabled = true;
+  try {
+    const { samples, rate } = await rekorderStoppen();
+    if (samples.length === 0) { setFehler('Nichts aufgenommen.'); return; }
+    aufnahmeWegwerfen(); // gibt eine ältere Vorschau-URL frei
+    referenzAufnahme = {
+      bytes: wavAusSamples(samples, rate),
+      dauer: samples.length / rate,
+    };
+    // Die frische Aufnahme schlägt eine zuvor gewählte Datei.
+    el('referenzDatei').value = '';
+    referenzUrl = URL.createObjectURL(
+      new Blob([referenzAufnahme.bytes], { type: 'audio/wav' }));
+    el('referenzVorschau').src = referenzUrl;
+    referenzAnzeigeAktualisieren();
+  } catch (e) {
+    setFehler('Aufnahme fehlgeschlagen: ' + e.message);
+  } finally {
+    el('referenzAufnahmeBtn').disabled = false;
+    sprechenBtn.disabled = false;
+  }
+}
+
+// ── Chunking (Trennzeichen) ─────────────────────────────────────────────────
+// Der Server zerlegt den Text vor der Synthese an diesen Zeichen und schickt
+// jeden Satz sofort als eigenen Audio-Chunk. Mehr Trennzeichen heißt: früher
+// Ton, aber zerhacktere Betonung, weil das Modell kürzere Bruchstücke einzeln
+// vertont. Kein Trennzeichen heißt: alles am Stück.
+const chunkKaesten = () =>
+  Array.from(document.querySelectorAll('#chunkGruppe input'));
+
+// Genau die angehakten Zeichen, in der Reihenfolge der Kästchen.
+// Leerer String = Chunking aus.
+const chunkAt = () =>
+  chunkKaesten().filter((k) => k.checked).map((k) => k.dataset.zeichen).join('');
+
+function chunkAnzeigeAktualisieren() {
+  const aus = chunkAt() === '';
+  el('chunkLabel').textContent = 'Chunking (Trennzeichen)' + (aus ? ' — aus' : '');
+  el('chunkLabel').classList.toggle('chunkAus', aus);
+  el('chunkHinweis').classList.toggle('chunkAus', aus);
+  el('chunkHinweis').textContent = aus
+    ? 'Kein Trennzeichen angehakt: der Text wird am Stück vertont — beste '
+      + 'Betonung, aber der Ton kommt erst, wenn der komplette Text fertig '
+      + 'gerechnet ist.'
+    : 'Mehr Trennzeichen = früher Ton, aber zerhacktere Betonung, weil das '
+      + 'Modell die kürzeren Bruchstücke einzeln vertont. Nichts angehakt = '
+      + 'alles am Stück.';
+}
+
+for (const kasten of chunkKaesten()) kasten.onchange = chunkAnzeigeAktualisieren;
+chunkAnzeigeAktualisieren();
+
 // ── Text-to-Speech ──────────────────────────────────────────────────────────
 sprechenBtn.onclick = async () => {
   const text = el('text').value.trim();
@@ -374,6 +594,10 @@ sprechenBtn.onclick = async () => {
     const anfrage = { text };
     if (hatSprachen && el('sprache').value) anfrage.language = el('sprache').value;
     if (hatStimmen && el('stimme').value) anfrage.speaker = el('stimme').value;
+    // Anders als oben IMMER mitschicken, auch als leerer String: nur so ist
+    // „alle Trennzeichen abgewählt" (Chunking aus) davon unterscheidbar, dass
+    // das Feld fehlt (Server-Default).
+    anfrage.chunk_at = chunkAt();
 
     // Nach erfolgreichem Durchlauf neu zu ladender Stimmenname, sonst null.
     let gespeichertAls = null;
@@ -386,18 +610,21 @@ sprechenBtn.onclick = async () => {
         anfrage.voice = gewaehlt;
       } else {
         const datei = el('referenzDatei').files[0];
+        // Referenz kommt entweder aus der Direktaufnahme oder aus der Datei —
+        // beides gleichzeitig gibt es nicht, die Aufnahme hat Vorrang.
+        const hatReferenz = !!(referenzAufnahme || datei);
         const referenzText = el('referenzText').value.trim();
         const name = el('speichernAls').value.trim();
         // Halbe Angaben würde der Server mit 400 ablehnen; das hier sofort zu
         // sagen erspart den Umweg. Gar keine Angabe ist dagegen in Ordnung.
-        if ((datei ? 1 : 0) + (referenzText ? 1 : 0) === 1) {
+        if ((hatReferenz ? 1 : 0) + (referenzText ? 1 : 0) === 1) {
           setFehler('Voice Cloning braucht beides: Referenz-Aufnahme und Transkript.');
           setStatus('');
           return;
         }
         // „Speichern unter" legt genau die frische Referenz ab — ohne sie gibt
         // es nichts zu speichern.
-        if (name && !datei) {
+        if (name && !hatReferenz) {
           setFehler('„Speichern unter" braucht eine Referenz-Aufnahme samt Transkript.');
           setStatus('');
           return;
@@ -408,8 +635,10 @@ sprechenBtn.onclick = async () => {
           setStatus('');
           return;
         }
-        if (datei) {
-          anfrage.reference_wav = await dateiAlsBase64(datei);
+        if (hatReferenz) {
+          anfrage.reference_wav = referenzAufnahme
+            ? base64Von(referenzAufnahme.bytes)
+            : await dateiAlsBase64(datei);
           anfrage.reference_text = referenzText;
           if (name) { anfrage.save_as = name; gespeichertAls = name; }
         }
@@ -471,9 +700,42 @@ function gespeicherteStimmenFuellen(namen, wunsch) {
 
 // Gespeicherte Stimme gewählt → Upload-Felder weg (und umgekehrt).
 function klonZweigAktualisieren() {
-  zeigen(el('klonUpload'), !el('gespeicherteStimme').value);
+  const gewaehlt = el('gespeicherteStimme').value;
+  zeigen(el('klonUpload'), !gewaehlt);
+  // Beim Eintrag „Neue Aufnahme hochladen …" gibt es nichts zu löschen.
+  zeigen(el('stimmeLoeschenBtn'), !!gewaehlt);
 }
 el('gespeicherteStimme').onchange = klonZweigAktualisieren;
+
+// Löschen ist endgültig — deshalb vorher nachfragen, mit Namen im Text.
+el('stimmeLoeschenBtn').onclick = async () => {
+  const name = el('gespeicherteStimme').value;
+  if (!name) return;
+  if (!confirm('Stimme „' + name + '" wirklich löschen? ' +
+               'Das lässt sich nicht rückgängig machen.')) return;
+  setFehler('');
+  el('stimmeLoeschenBtn').disabled = true;
+  try {
+    const res = await fetch('/api/voices/' + encodeURIComponent(name),
+                            { method: 'DELETE' });
+    if (!res.ok) {
+      // 400/404 begründen im Klartext-Body, was schiefging — das ist deutlich
+      // nützlicher als die nackte Statuszeile.
+      const meldung = await res.text().catch(() => '');
+      throw new Error(meldung.trim() || 'HTTP ' + res.status);
+    }
+    // Die Antwort ist bereits die aktualisierte Liste — kein zweiter GET nötig.
+    const namen = await res.json();
+    // Ohne Wunsch fällt die Auswahl zurück auf „Neue Aufnahme hochladen …",
+    // womit auch der Upload-Zweig wieder auftaucht.
+    gespeicherteStimmenFuellen(Array.isArray(namen) ? namen : [], null);
+    setStatus('Stimme „' + name + '" gelöscht.');
+  } catch (e) {
+    setFehler('Löschen fehlgeschlagen: ' + e.message);
+  } finally {
+    el('stimmeLoeschenBtn').disabled = false;
+  }
+};
 
 // Nach dem Speichern die Liste frisch holen — dafür reicht /api/voices, die
 // ganze Konfiguration muss dafür nicht noch einmal über die Leitung.
@@ -501,6 +763,16 @@ function konfigAnwenden(cfg) {
   kannKlonen = cfg.voice_cloning === true;
   if (cfg.sample_rate) zielRate = cfg.sample_rate;
 
+  // Vorbelegung der Trennzeichen: angehakt ist, was serverseitig eingestellt
+  // ist. Leerer String heißt entsprechend „alle aus". Fehlt das Feld ganz,
+  // bleibt die Vorbelegung aus dem Markup stehen.
+  if (typeof cfg.chunk_at === 'string') {
+    for (const kasten of chunkKaesten()) {
+      kasten.checked = cfg.chunk_at.includes(kasten.dataset.zeichen);
+    }
+    chunkAnzeigeAktualisieren();
+  }
+
   auswahlFuellen(el('sprache'), sprachen, 'german');
   auswahlFuellen(el('stimme'), stimmen, null);
   gespeicherteStimmenFuellen(
@@ -527,22 +799,15 @@ fetch('/api/config')
   .then(konfigAnwenden)
   .catch((e) => setFehler('Konfiguration nicht ladbar: ' + e.message));
 
-// ── Aufnahme (Speech-to-Speech) ─────────────────────────────────────────────
+// ── Rekorder (gemeinsam) ────────────────────────────────────────────────────
+// Nimmt roh vom Mikrofon auf und gibt das Signal unverändert zurück. Was danach
+// damit passiert — resampeln und an /api/s2s schicken oder als WAV-Referenz
+// behalten —, entscheidet allein der Aufrufer.
 let stream = null, audioCtx = null, node = null, quelle = null;
-let bloecke = [], laeuft = false;
+let bloecke = [];
 
-aufnahmeBtn.onclick = () => (laeuft ? stoppen() : starten());
-
-async function starten() {
-  transkriptEl.textContent = ''; antwortEl.textContent = ''; setFehler('');
-  mitschnittZuruecksetzen();
-  sseFehler = false;
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  } catch (e) {
-    setFehler('Kein Mikrofonzugriff: ' + e.message);
-    return;
-  }
+async function rekorderStarten() {
+  stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   audioCtx = new AudioContext();
   quelle = audioCtx.createMediaStreamSource(stream);
   // ScriptProcessor ist deprecated, läuft aber überall und ist hier deutlich
@@ -555,7 +820,40 @@ async function starten() {
   };
   quelle.connect(node);
   node.connect(audioCtx.destination); // ohne Ziel feuert onaudioprocess nicht
+}
 
+// Liefert { samples, rate }: die Blöcke zu einem durchgehenden Signal
+// zusammengefügt, dazu die Rate, mit der tatsächlich aufgezeichnet wurde.
+async function rekorderStoppen() {
+  node.disconnect(); quelle.disconnect();
+  stream.getTracks().forEach((t) => t.stop());
+  const rate = audioCtx.sampleRate;
+  await audioCtx.close();
+  stream = null; audioCtx = null; node = null; quelle = null;
+
+  const gesamt = bloecke.reduce((n, b) => n + b.length, 0);
+  const samples = new Float32Array(gesamt);
+  let pos = 0;
+  for (const b of bloecke) { samples.set(b, pos); pos += b.length; }
+  bloecke = [];
+  return { samples, rate };
+}
+
+// ── Aufnahme (Speech-to-Speech) ─────────────────────────────────────────────
+let laeuft = false;
+
+aufnahmeBtn.onclick = () => (laeuft ? stoppen() : starten());
+
+async function starten() {
+  transkriptEl.textContent = ''; antwortEl.textContent = ''; setFehler('');
+  mitschnittZuruecksetzen();
+  sseFehler = false;
+  try {
+    await rekorderStarten();
+  } catch (e) {
+    setFehler('Kein Mikrofonzugriff: ' + e.message);
+    return;
+  }
   laeuft = true;
   aufnahmeBtn.textContent = 'Stopp';
   setStatus('Aufnahme läuft');
@@ -566,19 +864,10 @@ async function stoppen() {
   aufnahmeBtn.textContent = 'Aufnehmen';
   aufnahmeBtn.disabled = true;
 
-  node.disconnect(); quelle.disconnect();
-  stream.getTracks().forEach((t) => t.stop());
-  const quellRate = audioCtx.sampleRate;
-  await audioCtx.close();
-
-  // Blöcke zu einem durchgehenden Signal zusammenfügen …
-  const gesamt = bloecke.reduce((n, b) => n + b.length, 0);
-  const roh = new Float32Array(gesamt);
-  let pos = 0;
-  for (const b of bloecke) { roh.set(b, pos); pos += b.length; }
-  bloecke = [];
-
-  const pcm = resample(roh, quellRate, zielRate);
+  const { samples, rate } = await rekorderStoppen();
+  // Hier — anders als bei der Referenz — auf die Rate aus /api/config bringen,
+  // die die Pipeline erwartet.
+  const pcm = resample(samples, rate, zielRate);
   if (pcm.length === 0) {
     setFehler('Nichts aufgenommen.'); setStatus(''); aufnahmeBtn.disabled = false;
     return;

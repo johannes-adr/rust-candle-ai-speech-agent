@@ -12,6 +12,46 @@ use crate::llm::{Llm, Message};
 use crate::stt::Stt;
 use crate::tts::{AudioChunk, Capabilities, SpeechRequest, Tts};
 
+/// An welchen Zeichen der Text vor der Synthese zerlegt wird.
+///
+/// Der Tausch dahinter: **mehr** Trennzeichen heißt früherer Ton, aber
+/// zerhacktere Betonung — das Modell vertont jedes Bruchstück einzeln und
+/// kennt den Satzbogen nicht mehr. **Keine** Trennzeichen heißt beste
+/// Betonung, aber man wartet auf den kompletten Text.
+///
+/// Leer = kein Chunking. Dann liefert [`take_sentence`] nie einen Satz, und
+/// `drain` schiebt am Ende alles in einem Stück in die Synthese.
+#[derive(Debug, Clone, Default)]
+pub struct Chunking {
+    terminators: Vec<char>,
+}
+
+impl Chunking {
+    /// Aus einer Zeichenkette wie `".!?"`; Duplikate und Whitespace fliegen raus.
+    pub fn parse(s: &str) -> Self {
+        let mut terminators: Vec<char> = Vec::new();
+        for c in s.chars().filter(|c| !c.is_whitespace()) {
+            if !terminators.contains(&c) {
+                terminators.push(c);
+            }
+        }
+        Self { terminators }
+    }
+
+    pub fn enabled(&self) -> bool {
+        !self.terminators.is_empty()
+    }
+
+    fn is_terminator(&self, c: char) -> bool {
+        self.terminators.contains(&c)
+    }
+
+    /// Für `/api/config`, damit das Frontend seine Auswahl vorbelegen kann.
+    pub fn as_string(&self) -> String {
+        self.terminators.iter().collect()
+    }
+}
+
 /// Was während eines Durchlaufs passiert, in Ankunftsreihenfolge.
 #[derive(Debug)]
 pub enum Event {
@@ -31,6 +71,7 @@ pub struct Pipeline {
     llm: Option<Llm>,
     tts: Tts,
     system_prompt: String,
+    chunking: Chunking,
 }
 
 impl Pipeline {
@@ -39,13 +80,21 @@ impl Pipeline {
         llm: Option<Llm>,
         tts: Tts,
         system_prompt: impl Into<String>,
+        chunking: Chunking,
     ) -> Self {
         Self {
             stt,
             llm,
             tts,
             system_prompt: system_prompt.into(),
+            chunking,
         }
+    }
+
+    /// Die serverseitige Voreinstellung — im Speech-to-Speech-Modus gilt
+    /// immer sie, weil dort kein JSON-Rahmen für eine Übersteuerung da ist.
+    pub fn chunking(&self) -> &Chunking {
+        &self.chunking
     }
 
     /// Sample-Rate, die die Pipeline als Eingang erwartet — `None`, wenn kein
@@ -68,6 +117,7 @@ impl Pipeline {
         let (tx, rx) = mpsc::channel(32);
         let tts = self.tts.clone();
         let system_prompt = self.system_prompt.clone();
+        let chunking = self.chunking.clone();
 
         tokio::spawn(async move {
             let transcript = match stt.transcribe(samples).await {
@@ -89,16 +139,24 @@ impl Pipeline {
             }
 
             let messages = vec![Message::system(system_prompt), Message::user(transcript)];
-            answer_and_speak(&llm, &tts, messages, &tx).await;
+            answer_and_speak(&llm, &tts, messages, &tx, &chunking).await;
         });
 
         Some(rx)
     }
 
     /// Reiner TTS-Modus: Text rein, Audio raus. Kein STT, kein LLM.
-    pub fn text_to_speech(&self, req: SpeechRequest) -> mpsc::Receiver<Event> {
+    ///
+    /// `chunking` übersteuert die Server-Voreinstellung für diese eine
+    /// Anfrage; `None` nimmt sie.
+    pub fn text_to_speech(
+        &self,
+        req: SpeechRequest,
+        chunking: Option<Chunking>,
+    ) -> mpsc::Receiver<Event> {
         let (tx, rx) = mpsc::channel(32);
         let tts = self.tts.clone();
+        let chunking = chunking.unwrap_or_else(|| self.chunking.clone());
 
         tokio::spawn(async move {
             let text = req.text.trim().to_string();
@@ -109,7 +167,7 @@ impl Pipeline {
             // Auch hier satzweise, damit lange Texte früh zu hören sind.
             let (sentences, speaker) = spawn_speaker(tts, tx.clone(), req);
             let mut buffer = text;
-            drain(&mut buffer, &sentences).await;
+            drain(&mut buffer, &sentences, &chunking).await;
             drop(sentences);
             let _ = speaker.await;
         });
@@ -162,6 +220,7 @@ async fn answer_and_speak(
     tts: &Tts,
     messages: Vec<Message>,
     tx: &mpsc::Sender<Event>,
+    chunking: &Chunking,
 ) {
     // Der Agent spricht mit den Server-Defaults — Sprache und Stimme sind
     // hier nichts, was der Nutzer pro Antwort wählt.
@@ -186,7 +245,7 @@ async fn answer_and_speak(
         // `false`: am Puffer-Ende noch nicht abschneiden — dort könnte der
         // Satz (oder eine Dezimalzahl) einfach noch weitergehen.
         let mut abgebrochen = false;
-        while let Some(sentence) = take_sentence(&mut buffer, false) {
+        while let Some(sentence) = take_sentence(&mut buffer, false, chunking) {
             if sentences.send(sentence).await.is_err() {
                 abgebrochen = true;
                 break;
@@ -198,7 +257,7 @@ async fn answer_and_speak(
     }
 
     // Rest nach Stream-Ende: jetzt ist der Puffer wirklich vollständig.
-    drain(&mut buffer, &sentences).await;
+    drain(&mut buffer, &sentences, chunking).await;
     // Sender fallen lassen, damit die Synthese-Task ihr Kanalende sieht.
     drop(sentences);
     let _ = speaker.await;
@@ -209,8 +268,8 @@ async fn answer_and_speak(
 /// Erst die noch vollständigen Sätze, dann — und das ist der Grund für diese
 /// Funktion — was ohne Satzzeichen übrig bleibt. Ein LLM, das mit „Bis dann"
 /// ohne Punkt endet, würde sonst still verschluckt.
-async fn drain(buffer: &mut String, sentences: &mpsc::Sender<String>) {
-    while let Some(sentence) = take_sentence(buffer, true) {
+async fn drain(buffer: &mut String, sentences: &mpsc::Sender<String>, chunking: &Chunking) {
+    while let Some(sentence) = take_sentence(buffer, true, chunking) {
         if sentences.send(sentence).await.is_err() {
             return;
         }
@@ -242,10 +301,11 @@ async fn speak(tts: &Tts, tx: &mpsc::Sender<Event>, req: SpeechRequest) -> bool 
 
 /// Schneidet den ersten vollständigen Satz vorne aus `buffer`.
 ///
-/// Satzende ist `.`, `!` oder `?`, gefolgt von Whitespace. Steht der
-/// Terminator am Puffer-Ende, ist noch offen, ob er wirklich einen Satz
-/// beendet: bei „19.“ könnte gleich „99“ folgen. Entscheidend ist deshalb das
-/// Zeichen **davor** — eine Ziffer heißt warten, alles andere heißt schneiden.
+/// Satzende ist eines der Zeichen aus `chunking`, gefolgt von Whitespace.
+/// Steht der Terminator am Puffer-Ende, ist noch offen, ob er wirklich einen
+/// Satz beendet: bei „19.“ könnte gleich „99“ folgen — und im Deutschen gilt
+/// dasselbe für „19,“. Entscheidend ist deshalb das Zeichen **davor**: eine
+/// Ziffer heißt warten, alles andere heißt schneiden.
 ///
 /// Das ist keine Kosmetik: der letzte Satz einer Antwort endet fast immer am
 /// Puffer-Ende, und ihn bis zum Schließen des LLM-Streams liegen zu lassen
@@ -254,9 +314,13 @@ async fn speak(tts: &Tts, tx: &mpsc::Sender<Event>, req: SpeechRequest) -> bool 
 ///
 /// Gibt `None` zurück, wenn kein Satz fertig ist oder nur Satzzeichen ohne
 /// sprechbaren Inhalt übrig sind.
-fn take_sentence(buffer: &mut String, flush: bool) -> Option<String> {
+fn take_sentence(buffer: &mut String, flush: bool, chunking: &Chunking) -> Option<String> {
+    if !chunking.enabled() {
+        return None;
+    }
+
     let end = buffer.char_indices().find_map(|(i, c)| {
-        if !matches!(c, '.' | '!' | '?') {
+        if !chunking.is_terminator(c) {
             return None;
         }
         let after = i + c.len_utf8();
@@ -280,38 +344,49 @@ fn take_sentence(buffer: &mut String, flush: bool) -> Option<String> {
     } else {
         // Reine Satzzeichen ergeben keine Sprachausgabe — verwerfen und den
         // Aufrufer weitersuchen lassen.
-        take_sentence(buffer, flush)
+        take_sentence(buffer, flush, chunking)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::take_sentence;
+    use super::{Chunking, take_sentence};
+
+    /// Die Voreinstellung: Punkt, Ausrufe- und Fragezeichen.
+    fn standard() -> Chunking {
+        Chunking::parse(".!?")
+    }
 
     #[test]
     fn splittet_am_satzende() {
         let mut buf = "Hallo Welt. Wie geht es dir?".to_string();
-        assert_eq!(take_sentence(&mut buf, false).as_deref(), Some("Hallo Welt."));
+        assert_eq!(
+            take_sentence(&mut buf, false, &standard()).as_deref(),
+            Some("Hallo Welt.")
+        );
         assert_eq!(buf, " Wie geht es dir?");
     }
 
     #[test]
     fn wartet_auf_unvollstaendigen_satz() {
         let mut buf = "Hallo Welt".to_string();
-        assert_eq!(take_sentence(&mut buf, false), None);
+        assert_eq!(take_sentence(&mut buf, false, &standard()), None);
         assert_eq!(buf, "Hallo Welt");
     }
 
     #[test]
     fn zerschneidet_keine_dezimalzahl() {
         let mut buf = "Das kostet 19.99 Euro".to_string();
-        assert_eq!(take_sentence(&mut buf, false), None);
+        assert_eq!(take_sentence(&mut buf, false, &standard()), None);
     }
 
     #[test]
     fn schneidet_letzten_satz_ohne_auf_stream_ende_zu_warten() {
         let mut buf = "Fertig.".to_string();
-        assert_eq!(take_sentence(&mut buf, false).as_deref(), Some("Fertig."));
+        assert_eq!(
+            take_sentence(&mut buf, false, &standard()).as_deref(),
+            Some("Fertig.")
+        );
         assert!(buf.is_empty());
     }
 
@@ -319,9 +394,9 @@ mod tests {
     fn wartet_bei_ziffer_vor_dem_punkt() {
         // Könnte „19.99“ werden — erst der Flush entscheidet.
         let mut buf = "Das kostet 19.".to_string();
-        assert_eq!(take_sentence(&mut buf, false), None);
+        assert_eq!(take_sentence(&mut buf, false, &standard()), None);
         assert_eq!(
-            take_sentence(&mut buf, true).as_deref(),
+            take_sentence(&mut buf, true, &standard()).as_deref(),
             Some("Das kostet 19.")
         );
         assert!(buf.is_empty());
@@ -330,7 +405,59 @@ mod tests {
     #[test]
     fn ueberspringt_inhaltslose_satzzeichen() {
         let mut buf = "... Also gut! Und weiter".to_string();
-        assert_eq!(take_sentence(&mut buf, false).as_deref(), Some("Also gut!"));
+        assert_eq!(
+            take_sentence(&mut buf, false, &standard()).as_deref(),
+            Some("Also gut!")
+        );
         assert_eq!(buf, " Und weiter");
+    }
+
+    #[test]
+    fn komma_trennt_nur_wenn_es_konfiguriert_ist() {
+        let text = "Erst dies, dann das. Ende";
+
+        let mut buf = text.to_string();
+        assert_eq!(
+            take_sentence(&mut buf, false, &standard()).as_deref(),
+            Some("Erst dies, dann das."),
+            "ohne Komma-Trenner bleibt der Satz zusammen"
+        );
+
+        let mut buf = text.to_string();
+        assert_eq!(
+            take_sentence(&mut buf, false, &Chunking::parse(".,!?")).as_deref(),
+            Some("Erst dies,"),
+            "mit Komma-Trenner wird davor geschnitten"
+        );
+    }
+
+    #[test]
+    fn komma_zerschneidet_keine_deutsche_dezimalzahl() {
+        // Im Deutschen ist das Komma das Dezimaltrennzeichen — „19,99“ darf
+        // auch dann zusammenbleiben, wenn am Komma getrennt wird.
+        let komma = Chunking::parse(".,!?");
+        let mut buf = "Das kostet 19,99 Euro".to_string();
+        assert_eq!(take_sentence(&mut buf, false, &komma), None);
+
+        let mut buf = "Das kostet 19,".to_string();
+        assert_eq!(take_sentence(&mut buf, false, &komma), None);
+    }
+
+    #[test]
+    fn ohne_trennzeichen_kein_chunking() {
+        let aus = Chunking::parse("");
+        assert!(!aus.enabled());
+
+        let mut buf = "Erster Satz. Zweiter Satz! Dritter?".to_string();
+        assert_eq!(take_sentence(&mut buf, false, &aus), None);
+        // Auch der Flush schneidet nicht — `drain` schiebt den Rest am Stück raus.
+        assert_eq!(take_sentence(&mut buf, true, &aus), None);
+        assert_eq!(buf, "Erster Satz. Zweiter Satz! Dritter?");
+    }
+
+    #[test]
+    fn parse_entfernt_duplikate_und_whitespace() {
+        assert_eq!(Chunking::parse(". . !  ?").as_string(), ".!?");
+        assert_eq!(Chunking::parse("   ").as_string(), "");
     }
 }

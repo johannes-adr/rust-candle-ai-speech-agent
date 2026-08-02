@@ -113,6 +113,30 @@ impl VoiceStore {
         Ok(name)
     }
 
+    /// Eine gespeicherte Stimme löschen.
+    ///
+    /// Beide Dateien müssen weg — bliebe eine übrig, würde `list` die Stimme
+    /// zwar nicht mehr anzeigen, aber ein späteres Speichern unter demselben
+    /// Namen träfe auf einen halben Altbestand.
+    ///
+    /// `Ok(false)`, wenn es die Stimme gar nicht gab; das ist kein Fehler,
+    /// sondern für den Aufrufer ein 404.
+    pub fn delete(&self, name: &str) -> Result<bool> {
+        let name = sanitize(name)?;
+        let (audio, transcript) = (self.audio_path(&name), self.transcript_path(&name));
+        if !audio.is_file() && !transcript.is_file() {
+            return Ok(false);
+        }
+
+        for pfad in [audio, transcript] {
+            if pfad.is_file() {
+                std::fs::remove_file(&pfad)
+                    .with_context(|| format!("Datei nicht löschbar: {}", pfad.display()))?;
+            }
+        }
+        Ok(true)
+    }
+
     fn audio_path(&self, name: &str) -> PathBuf {
         self.dir.join(format!("{name}.wav"))
     }
@@ -170,10 +194,18 @@ mod tests {
         assert!(store.list().is_empty());
     }
 
+    /// Eigenes Verzeichnis je Test — die Tests laufen parallel im selben
+    /// Prozess, eine gemeinsame PID reicht als Unterscheidung nicht.
+    fn temp_dir(marke: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("voices-test-{}-{marke}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
     #[test]
     fn listet_nur_vollstaendige_stimmen() {
-        let dir = std::env::temp_dir().join(format!("voices-test-{}", std::process::id()));
-        std::fs::create_dir_all(&dir).unwrap();
+        let dir = temp_dir("liste");
         std::fs::write(dir.join("ganz.wav"), b"x").unwrap();
         std::fs::write(dir.join("ganz.txt"), b"Text").unwrap();
         // Nur Audio, kein Transkript — unbrauchbar fürs Cloning.
@@ -183,5 +215,34 @@ mod tests {
         assert_eq!(store.list(), vec!["ganz".to_string()]);
 
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn loescht_beide_dateien() {
+        let dir = temp_dir("loeschen");
+        std::fs::write(dir.join("weg.wav"), b"x").unwrap();
+        std::fs::write(dir.join("weg.txt"), b"Text").unwrap();
+
+        let store = VoiceStore::new(&dir);
+        assert!(store.delete("weg").unwrap());
+        assert!(store.list().is_empty());
+        assert!(!dir.join("weg.wav").exists());
+        assert!(!dir.join("weg.txt").exists());
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn loeschen_meldet_unbekannte_stimme() {
+        let dir = temp_dir("unbekannt");
+        let store = VoiceStore::new(&dir);
+        assert!(!store.delete("gibtsnicht").unwrap());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn loeschen_blockt_pfad_ausbrueche() {
+        let store = VoiceStore::new(temp_dir("boese"));
+        assert!(store.delete("../../etc/passwd").is_err());
     }
 }
