@@ -36,7 +36,7 @@ use crane_core::models::{DType, Device};
 use crate::llm::Llm;
 use crate::pipeline::Pipeline;
 use crate::stt::Stt;
-use crate::tts::{Reference, Tts, TtsConfig};
+use crate::tts::{AudioChunk, Reference, Tts, TtsConfig};
 
 /// Modell für vorgegebene Sprecher (Preset-Stimmen).
 const CUSTOM_VOICE_MODEL: &str = "models/Qwen3-TTS-12Hz-0.6B-CustomVoice";
@@ -50,6 +50,10 @@ const OUT_DIR: &str = "out";
 
 const LLM_ENDPOINT: &str = "http://localhost:11434/v1";
 const LLM_MODEL: &str = "gemma4:e2b";
+/// `"none"` schaltet die Denkphase ab — bei gemma4:e2b gemessen 0,5 s statt
+/// 3,2 s bis zur Antwort. Für Modelle, deren Qualität am Denken hängt, hier
+/// `"low"`/`"medium"`/`"high"` setzen.
+const LLM_REASONING: &str = "none";
 const BIND: &str = "127.0.0.1:8080";
 
 const SYSTEM_PROMPT: &str = "Du bist ein gesprochener Assistent. Antworte auf Deutsch, \
@@ -119,6 +123,7 @@ fn tts_config(model_path: String, reference: Option<Reference>) -> TtsConfig {
         language: LANGUAGE.to_string(),
         speaker: std::env::var("TTS_SPEAKER").ok(),
         reference,
+        stream: env_or("TTS_STREAM", "1") != "0",
         opts: speech_options(),
     }
 }
@@ -165,11 +170,12 @@ async fn serve(device: Device) -> Result<()> {
 
     let endpoint = env_or("LLM_ENDPOINT", LLM_ENDPOINT);
     let model = env_or("LLM_MODEL", LLM_MODEL);
-    println!("LLM       : {model} @ {endpoint}");
+    let reasoning = env_or("LLM_REASONING", LLM_REASONING);
+    println!("LLM       : {model} @ {endpoint} (reasoning: {reasoning})");
 
     let pipeline = Arc::new(Pipeline::new(
         stt,
-        Llm::new(endpoint, model),
+        Llm::new(endpoint, model, reasoning),
         tts,
         SYSTEM_PROMPT,
     ));
@@ -205,12 +211,27 @@ async fn oneshot(text: &str, reference: Option<(&str, &str)>, device: Device) ->
     };
 
     let started = std::time::Instant::now();
-    let chunk = tts.synthesize(text).await?;
-    std::fs::write(&out_path, chunk.to_wav()?)?;
+
+    // Die Chunks des Satzes wieder zu einer Datei zusammensetzen.
+    let mut chunks = tts.synthesize(text);
+    let mut samples = Vec::new();
+    let mut sample_rate = 0;
+    while let Some(chunk) = chunks.recv().await {
+        let chunk = chunk?;
+        sample_rate = chunk.sample_rate;
+        samples.extend_from_slice(&chunk.samples);
+    }
+    anyhow::ensure!(!samples.is_empty(), "Keine Audiodaten erzeugt");
+
+    let audio = AudioChunk {
+        samples,
+        sample_rate,
+    };
+    std::fs::write(&out_path, audio.to_wav()?)?;
 
     println!(
-        "Gespeichert: {out_path}  ({} Hz) in {:.1?}",
-        chunk.sample_rate,
+        "Gespeichert: {out_path}  ({sample_rate} Hz, {:.1}s Audio) in {:.1?}",
+        audio.samples.len() as f32 / sample_rate as f32,
         started.elapsed()
     );
     Ok(())

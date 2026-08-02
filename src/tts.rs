@@ -9,7 +9,7 @@ use anyhow::{Context, Result};
 use crane_core::generation::SpeechOptions;
 use crane_core::models::qwen3_tts::Model;
 use crane_core::models::{DType, Device};
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::mpsc;
 
 /// Ein Stück fertig synthetisiertes Audio (mono, f32).
 #[derive(Debug, Clone)]
@@ -49,11 +49,22 @@ pub struct TtsConfig {
     /// Preset-Sprecher; `None` = erster Sprecher des Checkpoints.
     pub speaker: Option<String>,
     pub reference: Option<Reference>,
+    /// Audio schon während der Generierung eines Satzes ausgeben.
+    ///
+    /// Erkauft wird das mit Durchsatz: Crane dekodiert jeden Chunk mit 25
+    /// Frames Kontext, der Vokoder rechnet also Teile doppelt (gemessen 0,56x
+    /// statt 0,74x Echtzeit). Der erste Ton kommt dafür nach ~1 s statt nach
+    /// ~11 s. Für einen Dialog-Agenten ist das der richtige Tausch; für lange
+    /// Vorlese-Texte am Stück eher nicht.
+    pub stream: bool,
     pub opts: SpeechOptions,
 }
 
-/// Ein Auftrag an den Modell-Thread: Text rein, Audio zurück.
-type Job = (String, oneshot::Sender<Result<AudioChunk>>);
+/// Ein Auftrag an den Modell-Thread: Text rein, Audio-Chunks zurück.
+///
+/// Kein `oneshot`, weil ein Satz mehrere Chunks liefert — Crane gibt beim
+/// Streaming schon nach wenigen Codec-Frames das erste Stück Wellenform raus.
+type Job = (String, mpsc::UnboundedSender<Result<AudioChunk>>);
 
 /// Klonbarer Handle auf den TTS-Thread.
 #[derive(Clone)]
@@ -95,10 +106,8 @@ impl Tts {
                     return;
                 }
 
-                while let Some((text, reply)) = rx.blocking_recv() {
-                    let result = synthesize_blocking(&mut model, &cfg, speaker.as_deref(), &text);
-                    // Empfänger weg = Anfrage abgebrochen, kein Fehler.
-                    let _ = reply.send(result);
+                while let Some((text, out)) = rx.blocking_recv() {
+                    synthesize_blocking(&mut model, &cfg, speaker.as_deref(), &text, &out);
                 }
             })
             .context("TTS-Thread nicht startbar")?;
@@ -107,34 +116,74 @@ impl Tts {
         Ok(Self { tx })
     }
 
-    /// Einen Satz (oder beliebigen Text) synthetisieren.
-    pub async fn synthesize(&self, text: &str) -> Result<AudioChunk> {
-        let (reply_tx, reply_rx) = oneshot::channel();
-        self.tx
-            .send((text.to_string(), reply_tx))
-            .map_err(|_| anyhow::anyhow!("TTS-Thread ist beendet"))?;
-        reply_rx.await.context("TTS-Antwort verloren")?
+    /// Einen Satz synthetisieren.
+    ///
+    /// Liefert die Chunks, sobald sie fertig sind — der erste kommt lange vor
+    /// dem Satzende. Der Kanal schließt, wenn der Satz vollständig ist.
+    pub fn synthesize(&self, text: &str) -> mpsc::UnboundedReceiver<Result<AudioChunk>> {
+        let (out_tx, out_rx) = mpsc::unbounded_channel();
+        if self.tx.send((text.to_string(), out_tx.clone())).is_err() {
+            let _ = out_tx.send(Err(anyhow::anyhow!("TTS-Thread ist beendet")));
+        }
+        out_rx
     }
 }
 
 /// Die eigentliche Synthese — läuft ausschließlich auf dem TTS-Thread.
+///
+/// Voice Cloning kennt in Crane keinen Streaming-Pfad
+/// (`generate_speech_streaming` gibt es nur mit Preset-Sprecher), dort kommt
+/// der Satz deshalb als ein einzelner Chunk.
 fn synthesize_blocking(
     model: &mut Model,
     cfg: &TtsConfig,
     speaker: Option<&str>,
     text: &str,
-) -> Result<AudioChunk> {
-    let (audio, sample_rate) = match &cfg.reference {
-        Some(reference) => model.generate_voice_clone(
-            text,
-            &cfg.language,
-            &reference.samples,
-            reference.transcript.trim(),
-            &cfg.opts,
-        )?,
-        None => model.generate_speech(text, &cfg.language, speaker, &cfg.opts)?,
+    out: &mpsc::UnboundedSender<Result<AudioChunk>>,
+) {
+    let sample_rate = model.sample_rate();
+
+    if let Some(reference) = &cfg.reference {
+        let chunk = model
+            .generate_voice_clone(
+                text,
+                &cfg.language,
+                &reference.samples,
+                reference.transcript.trim(),
+                &cfg.opts,
+            )
+            .and_then(|(audio, sr)| to_chunk(&audio, sr));
+        let _ = out.send(chunk);
+        return;
+    }
+
+    if !cfg.stream {
+        let chunk = model
+            .generate_speech(text, &cfg.language, speaker, &cfg.opts)
+            .and_then(|(audio, sr)| to_chunk(&audio, sr));
+        let _ = out.send(chunk);
+        return;
+    }
+
+    let stream = match model.generate_speech_streaming(text, &cfg.language, speaker, &cfg.opts) {
+        Ok(stream) => stream,
+        Err(e) => {
+            let _ = out.send(Err(e));
+            return;
+        }
     };
 
+    for item in stream {
+        let chunk = item.and_then(|audio| to_chunk(&audio, sample_rate));
+        let failed = chunk.is_err();
+        // Empfänger weg = Anfrage abgebrochen, kein Fehler.
+        if out.send(chunk).is_err() || failed {
+            return;
+        }
+    }
+}
+
+fn to_chunk(audio: &crane_core::models::Tensor, sample_rate: u32) -> Result<AudioChunk> {
     let samples: Vec<f32> = audio.to_dtype(DType::F32)?.flatten_all()?.to_vec1()?;
     Ok(AudioChunk {
         samples,

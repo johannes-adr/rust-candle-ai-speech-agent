@@ -44,6 +44,7 @@ pub struct Llm {
     http: reqwest::Client,
     endpoint: String,
     model: String,
+    reasoning_effort: String,
 }
 
 impl Llm {
@@ -51,12 +52,17 @@ impl Llm {
     /// (z. B. `http://localhost:11434/v1`); angehängt wird `/chat/completions`.
     /// Ein abschließender `/` wird getrimmt, damit die URL nicht doppelt
     /// getrennt wird.
-    pub fn new(endpoint: impl Into<String>, model: impl Into<String>) -> Self {
+    pub fn new(
+        endpoint: impl Into<String>,
+        model: impl Into<String>,
+        reasoning_effort: impl Into<String>,
+    ) -> Self {
         let endpoint = endpoint.into().trim_end_matches('/').to_string();
         Self {
             http: reqwest::Client::new(),
             endpoint,
             model: model.into(),
+            reasoning_effort: reasoning_effort.into(),
         }
     }
 
@@ -88,10 +94,16 @@ impl Llm {
         tx: &mpsc::Sender<Result<String>>,
     ) -> Result<()> {
         let url = format!("{}/chat/completions", self.endpoint);
+        // `reasoning_effort: "none"` schaltet die Denkphase ab. Bei
+        // gemma4:e2b sind das gemessen 3,2 s statt 0,5 s bis zur Antwort —
+        // für einen Sprach-Agenten der mit Abstand größte Einzelposten.
+        // Ollamas eigenes `think: false` wirkt am OpenAI-Endpunkt *nicht*,
+        // dieses Feld schon; Modelle ohne Denkphase ignorieren es.
         let body = serde_json::json!({
             "model": self.model,
             "messages": messages,
             "stream": true,
+            "reasoning_effort": self.reasoning_effort,
         });
 
         let resp = self

@@ -120,6 +120,8 @@ Alles über Umgebungsvariablen, Defaults in [src/main.rs](src/main.rs):
 | `REF_TXT`      | —                                           | Transkript dazu (nur zusammen mit `REF_WAV`)|
 | `TTS_DTYPE`    | `f32`                                       | `f16` spart Speicher, siehe unten           |
 | `ASR_DTYPE`    | `f16`                                       | `f32` kostet ~1,5 GB mehr                   |
+| `TTS_STREAM`   | `1`                                         | `0` = ganzer Satz am Stück, siehe unten     |
+| `LLM_REASONING`| `none`                                      | Denkphase; `low`/`medium`/`high` schalten sie an |
 
 Der Agent spricht mit geklonter Stimme, sobald beide Referenz-Variablen gesetzt
 sind — dann wird automatisch das Base-Modell genommen:
@@ -130,6 +132,50 @@ REF_WAV=stimme.wav REF_TXT=stimme.txt cargo run --release
 
 Sampling und Sprache sind Konstanten in [src/main.rs](src/main.rs):
 `LANGUAGE`, `SYSTEM_PROMPT`, `speech_options()`.
+
+## Performance
+
+Gemessen auf M-Serie, 24 GB, warmes Ollama — Zeit bis zum **ersten hörbaren
+Ton** in einem Speech-to-Speech-Durchlauf:
+
+| Stufe            | Zeit    | Anmerkung                                  |
+| ---------------- | ------- | ------------------------------------------ |
+| ASR              | 0,2–0,4 s | F16 auf Metal, unkritisch                |
+| LLM erstes Token | 0,5–0,7 s | mit `reasoning_effort: none`             |
+| erstes Audio     | 1,5–1,7 s | vorher 8,7 s                             |
+
+Drei Dinge machen den Unterschied:
+
+**Denkphase aus.** `reasoning_effort: "none"` im Request — bei `gemma4:e2b`
+5,13 s → 0,48 s bis zum ersten Token. Ollamas eigenes `think: false` wirkt am
+OpenAI-Endpunkt **nicht**, dieses Feld schon.
+
+**TTS streamt innerhalb eines Satzes.** Crane gibt über
+`generate_speech_streaming` schon nach 5 Codec-Frames (≈0,4 s Ton) die erste
+Wellenform raus, statt den Satz fertigzurechnen: 11,5 s → 0,97 s bis zum ersten
+Chunk. Kostet Durchsatz, weil jeder Chunk mit 25 Frames Kontext dekodiert wird
+und der Vokoder Teile doppelt rechnet — 0,56x statt 0,74x Echtzeit. Für Dialog
+ist das der richtige Tausch, für langes Vorlesen nicht: dann `TTS_STREAM=0`.
+Voice Cloning hat in Crane keinen Streaming-Pfad und liefert immer den ganzen
+Satz.
+
+**LLM und TTS sind entkoppelt.** Die Satzerkennung läuft in einem eigenen Task
+und schiebt fertige Sätze in eine Warteschlange; die Synthese arbeitet sie
+nebenher ab. Sonst stünde das Lesen der LLM-Token still, solange ein Satz
+synthetisiert wird. Die Sätze selbst bleiben seriell — ein Modell, ein Thread.
+
+### Was noch bremst
+
+TTS läuft mit **0,56–0,74x Echtzeit**, also langsamer als das Abspielen. Bei
+langen Antworten leert sich die Warteschlange im Browser schneller, als sie
+gefüllt wird. Der eigentliche Hebel wäre F16 für den Talker (grob 2x), das
+bricht aber aktuell das Sampling — siehe unten. Quantisierung ist keine Option:
+Crane hat für `qwen3_tts` keinen quantisierten Pfad (kein GGUF, kein `QMatMul`),
+die MLX-4bit-Varianten auf HuggingFace lassen sich damit nicht laden.
+
+Auf der GPU liegt bereits alles: ASR, Talker **und** Vokoder. Der ONNX-Vokoder
+in Crane ist `#[cfg(feature = "onnx")]` und bei uns aus — genutzt wird der
+native Candle-Decoder auf demselben Metal-Device.
 
 ### Warum die dtypes unterschiedlich sind
 

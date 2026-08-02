@@ -6,6 +6,7 @@
 //! Antwort, während das LLM noch schreibt.
 
 use tokio::sync::mpsc;
+use tokio::task::JoinHandle;
 
 use crate::llm::{Llm, Message};
 use crate::stt::Stt;
@@ -93,22 +94,52 @@ impl Pipeline {
                 return;
             }
             // Auch hier satzweise, damit lange Texte früh zu hören sind.
+            let (sentences, speaker) = spawn_speaker(tts, tx.clone());
             let mut buffer = text;
-            drain(&tts, &tx, &mut buffer).await;
+            drain(&mut buffer, &sentences).await;
+            drop(sentences);
+            let _ = speaker.await;
         });
 
         rx
     }
 }
 
-/// LLM-Stream konsumieren, Deltas durchreichen und jeden fertigen Satz
-/// sofort synthetisieren.
+/// Startet die Synthese-Task und gibt den Kanal zurück, in den Sätze
+/// geschoben werden.
+///
+/// Diese Entkopplung ist der Grund, warum es sie gibt: die Synthese eines
+/// Satzes dauert länger als seine Wiedergabe, und würde sie im selben Task
+/// wie das Lesen des LLM-Streams laufen, stünde währenddessen die
+/// Token-Verarbeitung still — der Antworttext bliebe in der UI hängen und die
+/// nächsten Sätze würden erst nach der Synthese überhaupt erkannt. So läuft
+/// das LLM mit voller Geschwindigkeit weiter und füllt die Warteschlange,
+/// während TTS und Browser hinterherarbeiten.
+///
+/// Die Sätze selbst bleiben seriell: es gibt ein Modell auf einem Thread.
+fn spawn_speaker(tts: Tts, tx: mpsc::Sender<Event>) -> (mpsc::Sender<String>, JoinHandle<()>) {
+    let (sentences_tx, mut sentences_rx) = mpsc::channel::<String>(32);
+
+    let handle = tokio::spawn(async move {
+        while let Some(sentence) = sentences_rx.recv().await {
+            if !speak(&tts, &tx, &sentence).await {
+                break;
+            }
+        }
+    });
+
+    (sentences_tx, handle)
+}
+
+/// LLM-Stream konsumieren, Deltas durchreichen und fertige Sätze in die
+/// Synthese-Warteschlange schieben.
 async fn answer_and_speak(
     llm: &Llm,
     tts: &Tts,
     messages: Vec<Message>,
     tx: &mpsc::Sender<Event>,
 ) {
+    let (sentences, speaker) = spawn_speaker(tts.clone(), tx.clone());
     let mut deltas = llm.stream_chat(messages);
     let mut buffer = String::new();
 
@@ -117,55 +148,70 @@ async fn answer_and_speak(
             Ok(d) => d,
             Err(e) => {
                 let _ = tx.send(Event::Error(format!("LLM fehlgeschlagen: {e:#}"))).await;
-                return;
+                break;
             }
         };
 
         if tx.send(Event::Delta(delta.clone())).await.is_err() {
-            return;
+            break;
         }
         buffer.push_str(&delta);
 
         // `false`: am Puffer-Ende noch nicht abschneiden — dort könnte der
         // Satz (oder eine Dezimalzahl) einfach noch weitergehen.
+        let mut abgebrochen = false;
         while let Some(sentence) = take_sentence(&mut buffer, false) {
-            if !speak(tts, tx, &sentence).await {
-                return;
+            if sentences.send(sentence).await.is_err() {
+                abgebrochen = true;
+                break;
             }
+        }
+        if abgebrochen {
+            break;
         }
     }
 
     // Rest nach Stream-Ende: jetzt ist der Puffer wirklich vollständig.
-    drain(tts, tx, &mut buffer).await;
+    drain(&mut buffer, &sentences).await;
+    // Sender fallen lassen, damit die Synthese-Task ihr Kanalende sieht.
+    drop(sentences);
+    let _ = speaker.await;
 }
 
-/// Den Puffer restlos aussprechen.
+/// Den Puffer restlos in die Warteschlange schieben.
 ///
 /// Erst die noch vollständigen Sätze, dann — und das ist der Grund für diese
 /// Funktion — was ohne Satzzeichen übrig bleibt. Ein LLM, das mit „Bis dann"
 /// ohne Punkt endet, würde sonst still verschluckt.
-async fn drain(tts: &Tts, tx: &mpsc::Sender<Event>, buffer: &mut String) {
+async fn drain(buffer: &mut String, sentences: &mpsc::Sender<String>) {
     while let Some(sentence) = take_sentence(buffer, true) {
-        if !speak(tts, tx, &sentence).await {
+        if sentences.send(sentence).await.is_err() {
             return;
         }
     }
 
     let rest = buffer.trim();
     if rest.chars().any(char::is_alphanumeric) {
-        speak(tts, tx, &rest.to_string()).await;
+        let _ = sentences.send(rest.to_string()).await;
     }
     buffer.clear();
 }
 
-/// Einen Satz synthetisieren und senden. `false` = Empfänger ist weg,
-/// Aufrufer soll abbrechen.
+/// Einen Satz synthetisieren und die Chunks weiterreichen, sobald sie da sind.
+/// `false` = Empfänger ist weg, Aufrufer soll abbrechen.
 async fn speak(tts: &Tts, tx: &mpsc::Sender<Event>, sentence: &str) -> bool {
-    let event = match tts.synthesize(sentence).await {
-        Ok(chunk) => Event::Audio(chunk),
-        Err(e) => Event::Error(format!("TTS fehlgeschlagen: {e:#}")),
-    };
-    tx.send(event).await.is_ok()
+    let mut chunks = tts.synthesize(sentence);
+
+    while let Some(item) = chunks.recv().await {
+        let event = match item {
+            Ok(chunk) => Event::Audio(chunk),
+            Err(e) => Event::Error(format!("TTS fehlgeschlagen: {e:#}")),
+        };
+        if tx.send(event).await.is_err() {
+            return false;
+        }
+    }
+    true
 }
 
 /// Schneidet den ersten vollständigen Satz vorne aus `buffer`.
