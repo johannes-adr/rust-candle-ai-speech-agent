@@ -10,7 +10,7 @@ use tokio::task::JoinHandle;
 
 use crate::llm::{Llm, Message};
 use crate::stt::Stt;
-use crate::tts::{AudioChunk, Tts};
+use crate::tts::{AudioChunk, Capabilities, SpeechRequest, Tts};
 
 /// Was während eines Durchlaufs passiert, in Ankunftsreihenfolge.
 #[derive(Debug)]
@@ -24,15 +24,22 @@ pub enum Event {
     Error(String),
 }
 
+/// TTS ist immer da; STT und LLM fehlen im reinen Text-to-Speech-Betrieb
+/// (`MODE=tts`) — dann werden die Modelle gar nicht erst geladen.
 pub struct Pipeline {
-    stt: Stt,
-    llm: Llm,
+    stt: Option<Stt>,
+    llm: Option<Llm>,
     tts: Tts,
     system_prompt: String,
 }
 
 impl Pipeline {
-    pub fn new(stt: Stt, llm: Llm, tts: Tts, system_prompt: impl Into<String>) -> Self {
+    pub fn new(
+        stt: Option<Stt>,
+        llm: Option<Llm>,
+        tts: Tts,
+        system_prompt: impl Into<String>,
+    ) -> Self {
         Self {
             stt,
             llm,
@@ -41,18 +48,24 @@ impl Pipeline {
         }
     }
 
-    /// Sample-Rate, die die Pipeline als Eingang erwartet.
-    pub fn stt_sample_rate(&self) -> u32 {
-        self.stt.sample_rate()
+    /// Sample-Rate, die die Pipeline als Eingang erwartet — `None`, wenn kein
+    /// STT geladen ist.
+    pub fn stt_sample_rate(&self) -> Option<u32> {
+        self.stt.as_ref().map(Stt::sample_rate)
+    }
+
+    /// Was das geladene TTS-Checkpoint kann.
+    pub fn capabilities(&self) -> &Capabilities {
+        self.tts.capabilities()
     }
 
     /// Voller Durchlauf: gesprochene Frage rein, gesprochene Antwort raus.
     ///
-    /// `samples` ist Mono-f32-PCM mit [`Self::stt_sample_rate`].
-    pub fn speech_to_speech(&self, samples: Vec<f32>) -> mpsc::Receiver<Event> {
+    /// `samples` ist Mono-f32-PCM mit [`Self::stt_sample_rate`]. `None`, wenn
+    /// STT oder LLM fehlen.
+    pub fn speech_to_speech(&self, samples: Vec<f32>) -> Option<mpsc::Receiver<Event>> {
+        let (stt, llm) = (self.stt.clone()?, self.llm.clone()?);
         let (tx, rx) = mpsc::channel(32);
-        let stt = self.stt.clone();
-        let llm = self.llm.clone();
         let tts = self.tts.clone();
         let system_prompt = self.system_prompt.clone();
 
@@ -79,22 +92,22 @@ impl Pipeline {
             answer_and_speak(&llm, &tts, messages, &tx).await;
         });
 
-        rx
+        Some(rx)
     }
 
     /// Reiner TTS-Modus: Text rein, Audio raus. Kein STT, kein LLM.
-    pub fn text_to_speech(&self, text: String) -> mpsc::Receiver<Event> {
+    pub fn text_to_speech(&self, req: SpeechRequest) -> mpsc::Receiver<Event> {
         let (tx, rx) = mpsc::channel(32);
         let tts = self.tts.clone();
 
         tokio::spawn(async move {
-            let text = text.trim().to_string();
+            let text = req.text.trim().to_string();
             if text.is_empty() {
                 let _ = tx.send(Event::Error("Kein Text übergeben.".to_string())).await;
                 return;
             }
             // Auch hier satzweise, damit lange Texte früh zu hören sind.
-            let (sentences, speaker) = spawn_speaker(tts, tx.clone());
+            let (sentences, speaker) = spawn_speaker(tts, tx.clone(), req);
             let mut buffer = text;
             drain(&mut buffer, &sentences).await;
             drop(sentences);
@@ -117,12 +130,23 @@ impl Pipeline {
 /// während TTS und Browser hinterherarbeiten.
 ///
 /// Die Sätze selbst bleiben seriell: es gibt ein Modell auf einem Thread.
-fn spawn_speaker(tts: Tts, tx: mpsc::Sender<Event>) -> (mpsc::Sender<String>, JoinHandle<()>) {
+///
+/// `template` liefert Sprache, Stimme und Referenz für jeden Satz; nur der
+/// Text wird pro Satz ersetzt.
+fn spawn_speaker(
+    tts: Tts,
+    tx: mpsc::Sender<Event>,
+    template: SpeechRequest,
+) -> (mpsc::Sender<String>, JoinHandle<()>) {
     let (sentences_tx, mut sentences_rx) = mpsc::channel::<String>(32);
 
     let handle = tokio::spawn(async move {
         while let Some(sentence) = sentences_rx.recv().await {
-            if !speak(&tts, &tx, &sentence).await {
+            let req = SpeechRequest {
+                text: sentence,
+                ..template.clone()
+            };
+            if !speak(&tts, &tx, req).await {
                 break;
             }
         }
@@ -139,7 +163,9 @@ async fn answer_and_speak(
     messages: Vec<Message>,
     tx: &mpsc::Sender<Event>,
 ) {
-    let (sentences, speaker) = spawn_speaker(tts.clone(), tx.clone());
+    // Der Agent spricht mit den Server-Defaults — Sprache und Stimme sind
+    // hier nichts, was der Nutzer pro Antwort wählt.
+    let (sentences, speaker) = spawn_speaker(tts.clone(), tx.clone(), SpeechRequest::new(""));
     let mut deltas = llm.stream_chat(messages);
     let mut buffer = String::new();
 
@@ -199,8 +225,8 @@ async fn drain(buffer: &mut String, sentences: &mpsc::Sender<String>) {
 
 /// Einen Satz synthetisieren und die Chunks weiterreichen, sobald sie da sind.
 /// `false` = Empfänger ist weg, Aufrufer soll abbrechen.
-async fn speak(tts: &Tts, tx: &mpsc::Sender<Event>, sentence: &str) -> bool {
-    let mut chunks = tts.synthesize(sentence);
+async fn speak(tts: &Tts, tx: &mpsc::Sender<Event>, req: SpeechRequest) -> bool {
+    let mut chunks = tts.synthesize(req);
 
     while let Some(item) = chunks.recv().await {
         let event = match item {

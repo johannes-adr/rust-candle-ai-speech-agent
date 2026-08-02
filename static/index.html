@@ -28,8 +28,26 @@
     border: 1px solid #363b44; border-radius: 6px;
     padding: .6rem; font: inherit; resize: vertical;
   }
+  select, input[type=text] {
+    background: #1b1e24; color: #e6e6e6;
+    border: 1px solid #363b44; border-radius: 6px;
+    padding: .45rem .5rem; font: inherit;
+  }
+  input[type=text]::placeholder { color: #6b7280; }
   .panel { display: none; }
   .panel.aktiv { display: block; }
+  .zeile { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: .75rem; }
+  .feld { display: flex; flex-direction: column; gap: .25rem; }
+  .feld > span { font-size: .8rem; color: #9aa3b0; }
+  .klon { margin-top: 1rem; padding-top: .9rem; border-top: 1px solid #2b3038; }
+  .klon h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em;
+             color: #9aa3b0; margin: 0 0 .35rem; font-weight: 600; }
+  /* Felder im Klon-Block stehen untereinander, nicht in einer .zeile. */
+  .klon .feld { margin-bottom: .7rem; align-items: flex-start; }
+  .klon .feld select, .klon .feld input[type=text] { min-width: 14rem; }
+  .hinweis { color: #9aa3b0; font-size: .85rem; margin: 0 0 .7rem; }
+  input[type=file] { font: inherit; color: #9aa3b0; display: block; margin-bottom: .7rem; }
+  textarea.klein { min-height: 3.5rem; }
   .status { margin: 1rem 0; color: #9aa3b0; min-height: 1.5em; }
   .fehler { color: #ff8080; white-space: pre-wrap; }
   .ausgabe { margin-top: 1.25rem; }
@@ -45,7 +63,7 @@
 <main>
   <h1>Sprach-Agent</h1>
 
-  <div class="tabs">
+  <div id="tabs" class="tabs">
     <button id="tabS2s" class="aktiv">Speech-to-Speech</button>
     <button id="tabTts">Text-to-Speech</button>
   </div>
@@ -56,13 +74,51 @@
 
   <section id="panelTts" class="panel">
     <textarea id="text" placeholder="Text eingeben …"></textarea>
+
+    <!-- Auswahlfelder bleiben verborgen, bis /api/config sie gefüllt hat. -->
+    <div id="optionen" class="zeile" style="display:none">
+      <label id="spracheFeld" class="feld">
+        <span>Sprache</span>
+        <select id="sprache"></select>
+      </label>
+      <label id="stimmeFeld" class="feld">
+        <span>Stimme</span>
+        <select id="stimme"></select>
+      </label>
+    </div>
+
+    <!-- Nur beim Base-Checkpoint sichtbar (voice_cloning: true). -->
+    <div id="klonFeld" class="klon" style="display:none">
+      <h2>Voice Cloning</h2>
+
+      <!-- Nur sichtbar, wenn der Server überhaupt gespeicherte Stimmen kennt. -->
+      <label id="gespeicherteStimmeFeld" class="feld" style="display:none">
+        <span>Gespeicherte Stimme</span>
+        <select id="gespeicherteStimme"></select>
+      </label>
+
+      <!-- Der Upload-Zweig: verborgen, sobald eine gespeicherte Stimme gewählt ist. -->
+      <div id="klonUpload">
+        <p class="hinweis">~5–15 s saubere Aufnahme, Transkript muss exakt passen.</p>
+        <input id="referenzDatei" type="file" accept=".wav,audio/wav">
+        <textarea id="referenzText" class="klein" placeholder="Transkript der Referenz-Aufnahme …"></textarea>
+        <label class="feld" style="margin-top:.7rem">
+          <span>Speichern unter (optional)</span>
+          <input id="speichernAls" type="text" placeholder="z. B. johannes">
+        </label>
+      </div>
+    </div>
+
     <p><button id="sprechenBtn">Sprechen</button></p>
   </section>
 
   <p id="status" class="status"></p>
   <p id="fehler" class="fehler"></p>
 
-  <div class="ausgabe">
+  <!-- Erscheint, sobald der erste Audio-Chunk eines Durchlaufs da ist. -->
+  <p id="downloadZeile" style="display:none"><button id="downloadBtn">Audio herunterladen</button></p>
+
+  <div id="ausgabe" class="ausgabe">
     <h2>Du</h2>
     <div id="transkript" class="box"></div>
     <h2>Antwort</h2>
@@ -80,6 +136,12 @@ const aufnahmeBtn = el('aufnahmeBtn'), sprechenBtn = el('sprechenBtn');
 const setStatus = (t) => { statusEl.textContent = t; };
 const setFehler = (t) => { fehlerEl.textContent = t; };
 
+// ── Serverfähigkeiten ───────────────────────────────────────────────────────
+// Vorbelegt mit den Annahmen des Vollbetriebs; /api/config korrigiert sie
+// gleich beim Start (siehe unten).
+let zielRate = 16000;
+let kannS2s = true, hatSprachen = false, hatStimmen = false, kannKlonen = false;
+
 // ── Modus-Umschaltung ───────────────────────────────────────────────────────
 function modus(s2s) {
   el('tabS2s').classList.toggle('aktiv', s2s);
@@ -87,8 +149,15 @@ function modus(s2s) {
   el('panelS2s').classList.toggle('aktiv', s2s);
   el('panelTts').classList.toggle('aktiv', !s2s);
 }
-el('tabS2s').onclick = () => modus(true);
+// Ohne STT/LLM gibt es den Modus nicht — der Tab ist dann ohnehin ausgeblendet,
+// der Guard hält das Umschalten auch per Tastatur zuverlässig zu.
+el('tabS2s').onclick = () => { if (kannS2s) modus(true); };
 el('tabTts').onclick = () => modus(false);
+
+// ── Sichtbarkeit ────────────────────────────────────────────────────────────
+// '' setzt auf den Wert aus dem Stylesheet zurück (bei .panel also wieder auf
+// die .aktiv-Steuerung), 'none' überschreibt ihn.
+const zeigen = (element, an) => { element.style.display = an ? '' : 'none'; };
 
 // ── Abspielwarteschlange ────────────────────────────────────────────────────
 // Die Pipeline liefert Satz für Satz Audio. Statt auf alles zu warten, landet
@@ -118,14 +187,122 @@ function audioEinreihen(base64) {
   const roh = atob(base64);
   const bytes = new Uint8Array(roh.length);
   for (let i = 0; i < roh.length; i++) bytes[i] = roh.charCodeAt(i);
+  mitschneiden(bytes); // zusätzlich zur Wiedergabe, ändert an der Queue nichts
   queue.push(new Blob([bytes], { type: 'audio/wav' }));
   if (!spieltGerade) naechsterChunk();
 }
 
+// ── Mitschnitt für den Download ─────────────────────────────────────────────
+// Der Server schickt pro Satz eine eigenständige WAV-Datei mit eigenem Header.
+// Einfach aneinandergehängt ergäbe das keine gültige Datei — also sammeln wir
+// nur die reinen PCM-Blöcke und setzen beim Klick EINEN frischen Header davor.
+let pcmTeile = [];    // je Chunk ein Uint8Array mit reinem PCM
+let pcmFormat = null; // Rate/Kanäle/Bits, übernommen vom ersten Chunk
+let downloadUrl = null;
+
+function mitschnittZuruecksetzen() {
+  pcmTeile = [];
+  pcmFormat = null;
+  zeigen(el('downloadZeile'), false);
+}
+
+// Läuft die RIFF-Chunkliste ab Byte 12 ab (je 4 Byte ID + 4 Byte Länge,
+// little-endian). Feste 44 Byte Header anzunehmen wäre falsch, sobald vor
+// 'data' noch etwas anderes steht (z. B. ein LIST-Chunk).
+function wavZerlegen(bytes) {
+  if (bytes.length < 12) return null;
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const kennung = (p) =>
+    String.fromCharCode(bytes[p], bytes[p + 1], bytes[p + 2], bytes[p + 3]);
+  if (kennung(0) !== 'RIFF' || kennung(8) !== 'WAVE') return null;
+
+  let format = null, daten = null;
+  let pos = 12;
+  while (pos + 8 <= bytes.length) {
+    const id = kennung(pos);
+    const laenge = view.getUint32(pos + 4, true);
+    const inhalt = pos + 8;
+    if (id === 'fmt ' && laenge >= 16) {
+      format = {
+        kanaele: view.getUint16(inhalt + 2, true),
+        rate: view.getUint32(inhalt + 4, true),
+        bits: view.getUint16(inhalt + 14, true),
+      };
+    } else if (id === 'data') {
+      // Längenfeld 0 (Streaming-Header) oder überlang: auf den Rest begrenzen.
+      const ende = Math.min(inhalt + (laenge || bytes.length - inhalt), bytes.length);
+      daten = bytes.subarray(inhalt, ende);
+    }
+    pos = inhalt + laenge + (laenge % 2); // Chunks liegen auf geraden Grenzen
+  }
+  return format && daten ? { format, daten } : null;
+}
+
+function mitschneiden(bytes) {
+  const teil = wavZerlegen(bytes);
+  // Unlesbarer Chunk: die Wiedergabe läuft weiter, er fehlt nur im Download.
+  if (!teil) return;
+  if (!pcmFormat) pcmFormat = teil.format;
+  pcmTeile.push(teil.daten);
+  zeigen(el('downloadZeile'), true);
+}
+
+// Kanonischer 44-Byte-Header (RIFF/WAVE, fmt PCM 16, data).
+function wavKopf(laenge, format) {
+  const kopf = new Uint8Array(44);
+  const view = new DataView(kopf.buffer);
+  const text = (p, s) => { for (let i = 0; i < s.length; i++) kopf[p + i] = s.charCodeAt(i); };
+  const bytesProRahmen = format.kanaele * (format.bits / 8);
+  text(0, 'RIFF');
+  view.setUint32(4, 36 + laenge, true); // alles ab Byte 8
+  text(8, 'WAVE');
+  text(12, 'fmt ');
+  view.setUint32(16, 16, true);         // Länge des fmt-Blocks
+  view.setUint16(20, 1, true);          // 1 = PCM, unkomprimiert
+  view.setUint16(22, format.kanaele, true);
+  view.setUint32(24, format.rate, true);
+  view.setUint32(28, format.rate * bytesProRahmen, true); // Bytes pro Sekunde
+  view.setUint16(32, bytesProRahmen, true);
+  view.setUint16(34, format.bits, true);
+  text(36, 'data');
+  view.setUint32(40, laenge, true);
+  return kopf;
+}
+
+// 2026-08-02T14-31-05 — Doppelpunkte mögen Dateisysteme nicht.
+function zeitstempel() {
+  const d = new Date();
+  const zwei = (n) => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + zwei(d.getMonth() + 1) + '-' + zwei(d.getDate()) +
+         'T' + zwei(d.getHours()) + '-' + zwei(d.getMinutes()) + '-' + zwei(d.getSeconds());
+}
+
+el('downloadBtn').onclick = () => {
+  if (!pcmTeile.length || !pcmFormat) return;
+  const laenge = pcmTeile.reduce((n, t) => n + t.length, 0);
+  const blob = new Blob([wavKopf(laenge, pcmFormat), ...pcmTeile], { type: 'audio/wav' });
+
+  if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+  downloadUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = downloadUrl;
+  a.download = 'sprachagent-' + zeitstempel() + '.wav';
+  a.click();
+  // Freigeben, sobald der Browser den Download übernommen hat.
+  setTimeout(() => {
+    if (downloadUrl) { URL.revokeObjectURL(downloadUrl); downloadUrl = null; }
+  }, 60000);
+};
+
 // ── SSE-Antwort eines fetch()-POST lesen ────────────────────────────────────
 // fetch() kennt keinen EventSource, also selbst puffern und an \n\n splitten.
 async function sseLesen(response) {
-  if (!response.ok) throw new Error('Server: HTTP ' + response.status);
+  if (!response.ok) {
+    // 400/409 liefern eine Klartext-Begründung im Body — die ist deutlich
+    // nützlicher als die nackte Statuszeile. Erst lesen, dann werfen.
+    const meldung = await response.text().catch(() => '');
+    throw new Error(meldung.trim() || 'Server: HTTP ' + response.status);
+  }
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let puffer = '';
@@ -148,12 +325,39 @@ async function sseLesen(response) {
   }
 }
 
+// Ein Fehler im Stream kommt mit HTTP 200 an; für „hat der Durchlauf geklappt?"
+// (Stimme gespeichert?) braucht es deshalb diesen Merker.
+let sseFehler = false;
+
 function ereignis(ev) {
   if (ev.type === 'transcript') transkriptEl.textContent = ev.text;
   else if (ev.type === 'delta') antwortEl.textContent += ev.text;
   else if (ev.type === 'audio') audioEinreihen(ev.wav);
-  else if (ev.type === 'error') setFehler('Fehler: ' + ev.message);
+  else if (ev.type === 'error') { sseFehler = true; setFehler('Fehler: ' + ev.message); }
   else if (ev.type === 'done') setStatus('Fertig');
+}
+
+// ── Referenz-Aufnahme einlesen (Voice Cloning) ──────────────────────────────
+// btoa() will einen String, also müssen die Bytes erst einer werden.
+// String.fromCharCode(...bytes) auf einen Schlag sprengt bei einer WAV-Datei
+// von einigen hundert Kilobyte den Argument-Stack — deshalb blockweise.
+function base64Von(buffer) {
+  const bytes = new Uint8Array(buffer);
+  const BLOCK = 8192;
+  let text = '';
+  for (let i = 0; i < bytes.length; i += BLOCK) {
+    text += String.fromCharCode.apply(null, bytes.subarray(i, i + BLOCK));
+  }
+  return btoa(text);
+}
+
+function dateiAlsBase64(datei) {
+  return new Promise((fertig, fehlgeschlagen) => {
+    const leser = new FileReader();
+    leser.onload = () => fertig(base64Von(leser.result));
+    leser.onerror = () => fehlgeschlagen(new Error('Referenz-Datei nicht lesbar.'));
+    leser.readAsArrayBuffer(datei);
+  });
 }
 
 // ── Text-to-Speech ──────────────────────────────────────────────────────────
@@ -161,15 +365,65 @@ sprechenBtn.onclick = async () => {
   const text = el('text').value.trim();
   if (!text) return;
   transkriptEl.textContent = ''; antwortEl.textContent = ''; setFehler('');
+  mitschnittZuruecksetzen();
+  sseFehler = false;
   sprechenBtn.disabled = true;
   setStatus('Denke nach …');
   try {
+    // Nicht gesetzte Felder bleiben weg — der Server nimmt dann seinen Default.
+    const anfrage = { text };
+    if (hatSprachen && el('sprache').value) anfrage.language = el('sprache').value;
+    if (hatStimmen && el('stimme').value) anfrage.speaker = el('stimme').value;
+
+    // Nach erfolgreichem Durchlauf neu zu ladender Stimmenname, sonst null.
+    let gespeichertAls = null;
+
+    if (kannKlonen) {
+      const gewaehlt = el('gespeicherteStimme').value;
+      if (gewaehlt) {
+        // Gespeicherte Stimme: schließt eine frische Referenz aus, deshalb
+        // wandert hier ausschließlich `voice` in die Anfrage.
+        anfrage.voice = gewaehlt;
+      } else {
+        const datei = el('referenzDatei').files[0];
+        const referenzText = el('referenzText').value.trim();
+        const name = el('speichernAls').value.trim();
+        // Halbe Angaben würde der Server mit 400 ablehnen; das hier sofort zu
+        // sagen erspart den Umweg. Gar keine Angabe ist dagegen in Ordnung.
+        if ((datei ? 1 : 0) + (referenzText ? 1 : 0) === 1) {
+          setFehler('Voice Cloning braucht beides: Referenz-Aufnahme und Transkript.');
+          setStatus('');
+          return;
+        }
+        // „Speichern unter" legt genau die frische Referenz ab — ohne sie gibt
+        // es nichts zu speichern.
+        if (name && !datei) {
+          setFehler('„Speichern unter" braucht eine Referenz-Aufnahme samt Transkript.');
+          setStatus('');
+          return;
+        }
+        // Derselbe Zeichensatz, den der Server erzwingt (sonst HTTP 400).
+        if (name && !/^[A-Za-z0-9_-]+$/.test(name)) {
+          setFehler('Ungültiger Name: erlaubt sind nur Buchstaben, Ziffern, - und _.');
+          setStatus('');
+          return;
+        }
+        if (datei) {
+          anfrage.reference_wav = await dateiAlsBase64(datei);
+          anfrage.reference_text = referenzText;
+          if (name) { anfrage.save_as = name; gespeichertAls = name; }
+        }
+      }
+    }
+
     const res = await fetch('/api/tts', {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-      body: text,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(anfrage),
     });
     await sseLesen(res);
+    // Erst wenn der Durchlauf sauber war, ist die Stimme auch wirklich abgelegt.
+    if (gespeichertAls && !sseFehler) await gespeicherteStimmenNeuLaden(gespeichertAls);
   } catch (e) {
     setFehler('Fehler: ' + e.message); setStatus('');
   } finally {
@@ -177,13 +431,103 @@ sprechenBtn.onclick = async () => {
   }
 };
 
-// ── Aufnahme (Speech-to-Speech) ─────────────────────────────────────────────
-let zielRate = 16000;
+// ── Konfiguration vom Server ────────────────────────────────────────────────
+// Der Server hat genau EIN TTS-Checkpoint geladen, und das legt fest, was geht:
+// entweder Preset-Stimmen (voices gefüllt) oder Voice Cloning (voices leer,
+// voice_cloning: true) — nie beides. Dazu kommt, ob überhaupt STT und LLM da
+// sind. Alles, was nicht geht, wird hier ausgeblendet statt deaktiviert.
+function auswahlFuellen(select, werte, wunsch) {
+  select.innerHTML = '';
+  for (const wert of werte) {
+    const option = document.createElement('option');
+    option.value = wert;
+    option.textContent = wert;
+    select.appendChild(option);
+  }
+  if (werte.length) select.value = werte.includes(wunsch) ? wunsch : werte[0];
+}
+
+// ── Gespeicherte Klon-Stimmen ───────────────────────────────────────────────
+// Erster Eintrag mit leerem value = Upload-Zweig; jeder andere Wert ist der
+// Name einer serverseitig abgelegten Referenz.
+function gespeicherteStimmenFuellen(namen, wunsch) {
+  const select = el('gespeicherteStimme');
+  select.innerHTML = '';
+  const neu = document.createElement('option');
+  neu.value = '';
+  neu.textContent = 'Neue Aufnahme hochladen …';
+  select.appendChild(neu);
+  for (const name of namen) {
+    const option = document.createElement('option');
+    option.value = name;
+    option.textContent = name;
+    select.appendChild(option);
+  }
+  select.value = namen.includes(wunsch) ? wunsch : '';
+  // Ohne gespeicherte Stimmen gibt es nichts zu wählen — dann bleibt nur Upload.
+  zeigen(el('gespeicherteStimmeFeld'), namen.length > 0);
+  klonZweigAktualisieren();
+}
+
+// Gespeicherte Stimme gewählt → Upload-Felder weg (und umgekehrt).
+function klonZweigAktualisieren() {
+  zeigen(el('klonUpload'), !el('gespeicherteStimme').value);
+}
+el('gespeicherteStimme').onchange = klonZweigAktualisieren;
+
+// Nach dem Speichern die Liste frisch holen — dafür reicht /api/voices, die
+// ganze Konfiguration muss dafür nicht noch einmal über die Leitung.
+async function gespeicherteStimmenNeuLaden(auswahl) {
+  try {
+    const res = await fetch('/api/voices');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const namen = await res.json();
+    gespeicherteStimmenFuellen(Array.isArray(namen) ? namen : [], auswahl);
+    // Der Name ist verbraucht; sonst würde der nächste Durchlauf ihn erneut
+    // schicken und am doppelten Namen scheitern.
+    el('speichernAls').value = '';
+  } catch (e) {
+    setFehler('Gespeicherte Stimmen nicht ladbar: ' + e.message);
+  }
+}
+
+function konfigAnwenden(cfg) {
+  const sprachen = Array.isArray(cfg.languages) ? cfg.languages : [];
+  const stimmen = Array.isArray(cfg.voices) ? cfg.voices : [];
+
+  kannS2s = cfg.speech_to_speech === true;
+  hatSprachen = sprachen.length > 0;
+  hatStimmen = stimmen.length > 0;
+  kannKlonen = cfg.voice_cloning === true;
+  if (cfg.sample_rate) zielRate = cfg.sample_rate;
+
+  auswahlFuellen(el('sprache'), sprachen, 'german');
+  auswahlFuellen(el('stimme'), stimmen, null);
+  gespeicherteStimmenFuellen(
+    Array.isArray(cfg.saved_voices) ? cfg.saved_voices : [], null);
+  zeigen(el('spracheFeld'), hatSprachen);
+  zeigen(el('stimmeFeld'), hatStimmen);
+  zeigen(el('optionen'), hatSprachen || hatStimmen);
+  zeigen(el('klonFeld'), kannKlonen);
+
+  if (!kannS2s) {
+    zeigen(el('tabS2s'), false);
+    zeigen(el('panelS2s'), false);
+    // Bei nur einem Modus hat die Tab-Leiste keinen Zweck mehr.
+    zeigen(el('tabs'), false);
+    // Ebenso „Du"/„Antwort": im reinen TTS-Modus gibt es weder ein Transkript
+    // noch eine LLM-Antwort.
+    zeigen(el('ausgabe'), false);
+    modus(false);
+  }
+}
+
 fetch('/api/config')
   .then((r) => r.json())
-  .then((c) => { zielRate = c.sample_rate; })
-  .catch(() => {});
+  .then(konfigAnwenden)
+  .catch((e) => setFehler('Konfiguration nicht ladbar: ' + e.message));
 
+// ── Aufnahme (Speech-to-Speech) ─────────────────────────────────────────────
 let stream = null, audioCtx = null, node = null, quelle = null;
 let bloecke = [], laeuft = false;
 
@@ -191,6 +535,8 @@ aufnahmeBtn.onclick = () => (laeuft ? stoppen() : starten());
 
 async function starten() {
   transkriptEl.textContent = ''; antwortEl.textContent = ''; setFehler('');
+  mitschnittZuruecksetzen();
+  sseFehler = false;
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   } catch (e) {

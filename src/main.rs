@@ -25,6 +25,7 @@ mod llm;
 mod pipeline;
 mod stt;
 mod tts;
+mod voices;
 mod web;
 
 use std::sync::Arc;
@@ -36,7 +37,8 @@ use crane_core::models::{DType, Device};
 use crate::llm::Llm;
 use crate::pipeline::Pipeline;
 use crate::stt::Stt;
-use crate::tts::{AudioChunk, Reference, Tts, TtsConfig};
+use crate::tts::{AudioChunk, Reference, SpeechRequest, Tts, TtsConfig};
+use crate::voices::VoiceStore;
 
 /// Modell für vorgegebene Sprecher (Preset-Stimmen).
 const CUSTOM_VOICE_MODEL: &str = "models/Qwen3-TTS-12Hz-0.6B-CustomVoice";
@@ -44,6 +46,8 @@ const CUSTOM_VOICE_MODEL: &str = "models/Qwen3-TTS-12Hz-0.6B-CustomVoice";
 const BASE_MODEL: &str = "models/Qwen3-TTS-12Hz-0.6B-Base";
 /// Modell für Spracherkennung — Crane erwartet das flache `-hf`-Layout.
 const ASR_MODEL: &str = "models/Qwen3-ASR-0.6B-hf";
+/// Ablage geklonter Stimmen: je Stimme `<name>.wav` plus `<name>.txt`.
+const VOICES_DIR: &str = "voices";
 
 const LANGUAGE: &str = "german";
 const OUT_DIR: &str = "out";
@@ -66,6 +70,12 @@ const SPEAKER_ENCODER_SR: u32 = 16_000;
 /// Umgebungsvariable lesen, sonst den Default nehmen.
 fn env_or(key: &str, default: &str) -> String {
     std::env::var(key).unwrap_or_else(|_| default.to_string())
+}
+
+/// `MODE=tts` schaltet Speech-to-Speech ab: ASR und LLM werden nicht geladen
+/// und die WebUI blendet den Modus aus.
+fn tts_only() -> bool {
+    env_or("MODE", "full").eq_ignore_ascii_case("tts")
 }
 
 fn speech_options() -> SpeechOptions {
@@ -163,27 +173,51 @@ async fn serve(device: Device) -> Result<()> {
     println!("Lade TTS-Modell: {tts_model} ({:?})", tts_dtype());
     let tts = Tts::spawn(tts_config(tts_model, reference), device.clone(), tts_dtype())?;
 
-    println!("Lade ASR-Modell: {asr_model} ({:?})", asr_dtype());
-    // Qwen3-ASR erkennt die Sprache selbst; der Prompt kennt keinen
-    // Sprach-Hinweis, deshalb `None`.
-    let stt = Stt::spawn(&asr_model, None, device, asr_dtype())?;
+    let caps = tts.capabilities();
+    println!("Sprachen  : {}", caps.languages.join(", "));
+    if caps.cloning {
+        println!("Stimme    : Voice Cloning (Base-Checkpoint, Referenz nötig)");
+    } else {
+        println!("Stimmen   : {}", caps.speakers.join(", "));
+    }
 
-    let endpoint = env_or("LLM_ENDPOINT", LLM_ENDPOINT);
-    let model = env_or("LLM_MODEL", LLM_MODEL);
-    let reasoning = env_or("LLM_REASONING", LLM_REASONING);
-    println!("LLM       : {model} @ {endpoint} (reasoning: {reasoning})");
+    // MODE=tts lädt ASR und LLM gar nicht erst — spart auf einer 24-GB-Kiste
+    // rund 1,6 GB VRAM und die halbe Startzeit.
+    let (stt, llm) = if tts_only() {
+        println!("Modus     : nur Text-to-Speech (ASR und LLM werden nicht geladen)");
+        (None, None)
+    } else {
+        println!("Lade ASR-Modell: {asr_model} ({:?})", asr_dtype());
+        // Qwen3-ASR erkennt die Sprache selbst; der Prompt kennt keinen
+        // Sprach-Hinweis, deshalb `None`.
+        let stt = Stt::spawn(&asr_model, None, device, asr_dtype())?;
 
-    let pipeline = Arc::new(Pipeline::new(
-        stt,
-        Llm::new(endpoint, model, reasoning),
-        tts,
-        SYSTEM_PROMPT,
-    ));
+        let endpoint = env_or("LLM_ENDPOINT", LLM_ENDPOINT);
+        let model = env_or("LLM_MODEL", LLM_MODEL);
+        let reasoning = env_or("LLM_REASONING", LLM_REASONING);
+        println!("LLM       : {model} @ {endpoint} (reasoning: {reasoning})");
+
+        (Some(stt), Some(Llm::new(endpoint, model, reasoning)))
+    };
+
+    let voices = Arc::new(VoiceStore::new(env_or("VOICES_DIR", VOICES_DIR)));
+    let gespeichert = voices.list();
+    println!(
+        "Stimmen-Ablage: {} ({})",
+        voices.dir().display(),
+        if gespeichert.is_empty() {
+            "leer".to_string()
+        } else {
+            gespeichert.join(", ")
+        }
+    );
+
+    let pipeline = Arc::new(Pipeline::new(stt, llm, tts, SYSTEM_PROMPT));
 
     let addr = env_or("BIND", BIND)
         .parse()
         .context("BIND ist keine gültige Adresse (erwartet z. B. 127.0.0.1:8080)")?;
-    web::serve(pipeline, addr).await
+    web::serve(pipeline, voices, addr).await
 }
 
 /// Einmal synthetisieren und als WAV ablegen — der ursprüngliche CLI-Modus.
@@ -213,7 +247,7 @@ async fn oneshot(text: &str, reference: Option<(&str, &str)>, device: Device) ->
     let started = std::time::Instant::now();
 
     // Die Chunks des Satzes wieder zu einer Datei zusammensetzen.
-    let mut chunks = tts.synthesize(text);
+    let mut chunks = tts.synthesize(SpeechRequest::new(text));
     let mut samples = Vec::new();
     let mut sample_rate = 0;
     while let Some(chunk) = chunks.recv().await {

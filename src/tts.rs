@@ -60,16 +60,55 @@ pub struct TtsConfig {
     pub opts: SpeechOptions,
 }
 
-/// Ein Auftrag an den Modell-Thread: Text rein, Audio-Chunks zurück.
+/// Eine einzelne Synthese-Anfrage. `None` heißt jeweils: Default aus
+/// [`TtsConfig`] nehmen.
+#[derive(Debug, Clone)]
+pub struct SpeechRequest {
+    pub text: String,
+    pub language: Option<String>,
+    pub speaker: Option<String>,
+    pub reference: Option<Reference>,
+}
+
+impl SpeechRequest {
+    /// Anfrage nur mit Text — alles andere wie konfiguriert.
+    pub fn new(text: impl Into<String>) -> Self {
+        Self {
+            text: text.into(),
+            language: None,
+            speaker: None,
+            reference: None,
+        }
+    }
+}
+
+/// Was das geladene Checkpoint kann — beim Laden aus der `config.json`
+/// gelesen, damit die UI nur anbietet, was tatsächlich geht.
+///
+/// Ein Prozess hat immer genau ein Checkpoint geladen, und die beiden
+/// Varianten schließen sich aus: CustomVoice kann Preset-Stimmen und **kein**
+/// Cloning, Base kann **nur** Cloning.
+#[derive(Debug, Clone)]
+pub struct Capabilities {
+    /// Unterstützte Sprachen, sortiert, mit `"auto"` an erster Stelle.
+    pub languages: Vec<String>,
+    /// Preset-Sprecher, sortiert; leer beim Base-Checkpoint.
+    pub speakers: Vec<String>,
+    /// `true` = Base-Checkpoint, spricht nur mit Referenz-Audio.
+    pub cloning: bool,
+}
+
+/// Ein Auftrag an den Modell-Thread: Anfrage rein, Audio-Chunks zurück.
 ///
 /// Kein `oneshot`, weil ein Satz mehrere Chunks liefert — Crane gibt beim
 /// Streaming schon nach wenigen Codec-Frames das erste Stück Wellenform raus.
-type Job = (String, mpsc::UnboundedSender<Result<AudioChunk>>);
+type Job = (SpeechRequest, mpsc::UnboundedSender<Result<AudioChunk>>);
 
 /// Klonbarer Handle auf den TTS-Thread.
 #[derive(Clone)]
 pub struct Tts {
     tx: mpsc::UnboundedSender<Job>,
+    capabilities: Capabilities,
 }
 
 impl Tts {
@@ -77,7 +116,7 @@ impl Tts {
     pub fn spawn(cfg: TtsConfig, device: Device, dtype: DType) -> Result<Self> {
         let (tx, mut rx) = mpsc::unbounded_channel::<Job>();
         // std-Kanal, weil das Laden synchron abgewartet wird.
-        let (ready_tx, ready_rx) = std::sync::mpsc::channel::<Result<()>>();
+        let (ready_tx, ready_rx) = std::sync::mpsc::channel::<Result<Capabilities>>();
 
         std::thread::Builder::new()
             .name("tts".into())
@@ -93,39 +132,64 @@ impl Tts {
                     }
                 };
 
-                // Sprecher einmalig auflösen: sortiert, damit der Default
-                // reproduzierbar ist.
-                let speaker = cfg.speaker.clone().or_else(|| {
-                    let mut names: Vec<String> =
-                        model.config.talker_config.spk_id.keys().cloned().collect();
-                    names.sort();
-                    names.first().cloned()
-                });
+                let capabilities = read_capabilities(&model);
 
-                if ready_tx.send(Ok(())).is_err() {
+                // Default-Sprecher einmalig auflösen: sortiert, damit er
+                // reproduzierbar ist.
+                let speaker = cfg
+                    .speaker
+                    .clone()
+                    .or_else(|| capabilities.speakers.first().cloned());
+
+                if ready_tx.send(Ok(capabilities)).is_err() {
                     return;
                 }
 
-                while let Some((text, out)) = rx.blocking_recv() {
-                    synthesize_blocking(&mut model, &cfg, speaker.as_deref(), &text, &out);
+                while let Some((req, out)) = rx.blocking_recv() {
+                    synthesize_blocking(&mut model, &cfg, speaker.as_deref(), &req, &out);
                 }
             })
             .context("TTS-Thread nicht startbar")?;
 
-        ready_rx.recv().context("TTS-Thread abgestürzt")??;
-        Ok(Self { tx })
+        let capabilities = ready_rx.recv().context("TTS-Thread abgestürzt")??;
+        Ok(Self { tx, capabilities })
+    }
+
+    /// Was das geladene Checkpoint kann.
+    pub fn capabilities(&self) -> &Capabilities {
+        &self.capabilities
     }
 
     /// Einen Satz synthetisieren.
     ///
     /// Liefert die Chunks, sobald sie fertig sind — der erste kommt lange vor
     /// dem Satzende. Der Kanal schließt, wenn der Satz vollständig ist.
-    pub fn synthesize(&self, text: &str) -> mpsc::UnboundedReceiver<Result<AudioChunk>> {
+    pub fn synthesize(&self, req: SpeechRequest) -> mpsc::UnboundedReceiver<Result<AudioChunk>> {
         let (out_tx, out_rx) = mpsc::unbounded_channel();
-        if self.tx.send((text.to_string(), out_tx.clone())).is_err() {
+        if self.tx.send((req, out_tx.clone())).is_err() {
             let _ = out_tx.send(Err(anyhow::anyhow!("TTS-Thread ist beendet")));
         }
         out_rx
+    }
+}
+
+/// Sprachen und Stimmen aus der geladenen `config.json` ziehen.
+fn read_capabilities(model: &Model) -> Capabilities {
+    let talker = &model.config.talker_config;
+
+    let mut languages: Vec<String> = talker.codec_language_id.keys().cloned().collect();
+    languages.sort();
+    // "auto" steht nicht in der Config — Crane wertet es als Sonderfall aus
+    // und überlässt die Sprache dem Modell.
+    languages.insert(0, "auto".to_string());
+
+    let mut speakers: Vec<String> = talker.spk_id.keys().cloned().collect();
+    speakers.sort();
+
+    Capabilities {
+        languages,
+        speakers,
+        cloning: model.config.tts_model_type.as_deref() == Some("base"),
     }
 }
 
@@ -137,17 +201,23 @@ impl Tts {
 fn synthesize_blocking(
     model: &mut Model,
     cfg: &TtsConfig,
-    speaker: Option<&str>,
-    text: &str,
+    default_speaker: Option<&str>,
+    req: &SpeechRequest,
     out: &mpsc::UnboundedSender<Result<AudioChunk>>,
 ) {
     let sample_rate = model.sample_rate();
+    let text = req.text.as_str();
 
-    if let Some(reference) = &cfg.reference {
+    // Anfrage schlägt Konfiguration.
+    let language = req.language.as_deref().unwrap_or(&cfg.language);
+    let speaker = req.speaker.as_deref().or(default_speaker);
+    let reference = req.reference.as_ref().or(cfg.reference.as_ref());
+
+    if let Some(reference) = reference {
         let chunk = model
             .generate_voice_clone(
                 text,
-                &cfg.language,
+                language,
                 &reference.samples,
                 reference.transcript.trim(),
                 &cfg.opts,
@@ -159,13 +229,13 @@ fn synthesize_blocking(
 
     if !cfg.stream {
         let chunk = model
-            .generate_speech(text, &cfg.language, speaker, &cfg.opts)
+            .generate_speech(text, language, speaker, &cfg.opts)
             .and_then(|(audio, sr)| to_chunk(&audio, sr));
         let _ = out.send(chunk);
         return;
     }
 
-    let stream = match model.generate_speech_streaming(text, &cfg.language, speaker, &cfg.opts) {
+    let stream = match model.generate_speech_streaming(text, language, speaker, &cfg.opts) {
         Ok(stream) => stream,
         Err(e) => {
             let _ = out.send(Err(e));

@@ -73,7 +73,71 @@ cargo run --release
 → [http://127.0.0.1:8080](http://127.0.0.1:8080). Zwei Modi in der UI:
 
 - **Speech-to-Speech** — Mikrofon aufnehmen, Antwort anhören
-- **Text-to-Speech** — Text eingeben, vorlesen lassen
+- **Text-to-Speech** — Text eingeben, vorlesen lassen; Sprache und Stimme pro
+  Anfrage wählbar
+
+### Nur Text-to-Speech
+
+```bash
+MODE=tts cargo run --release
+```
+
+Dann werden ASR und LLM **gar nicht geladen** — spart ~1,6 GB VRAM und die
+halbe Startzeit, und Ollama muss nicht laufen. Die WebUI blendet den
+Speech-to-Speech-Modus dann aus.
+
+### Was die UI anbietet, hängt am Checkpoint
+
+Ein Prozess lädt genau ein TTS-Checkpoint, und die beiden schließen sich aus:
+
+| Checkpoint      | `tts_model_type` | UI zeigt                                  |
+| --------------- | ---------------- | ----------------------------------------- |
+| **CustomVoice** | `custom_voice`   | Sprach- und Stimmen-Auswahl (9 Presets)   |
+| **Base**        | `base`           | Sprach-Auswahl + Referenz-Upload (Cloning)|
+
+Sprachen und Stimmen liest der Server beim Laden aus der `config.json` des
+Checkpoints und meldet sie über `/api/config` — die UI rät nichts.
+
+Voice Cloning in der UI also so:
+
+```bash
+MODE=tts TTS_MODEL=models/Qwen3-TTS-12Hz-0.6B-Base cargo run --release
+```
+
+Danach im Text-to-Speech-Modus die Referenz-WAV hochladen und ihr Transkript
+eintragen. Alternativ per `REF_WAV`/`REF_TXT` fest vorgeben — dann gilt die
+Referenz für alle Anfragen, auch für den Agenten im Speech-to-Speech-Modus.
+
+### Stimmen-Ablage
+
+Damit man eine Referenz nicht jedes Mal neu hochlädt, liegen geklonte Stimmen
+in `voices/` (änderbar über `VOICES_DIR`) — je Stimme zwei Dateien:
+
+```
+voices/
+├── johannes.wav    Referenz-Aufnahme
+├── johannes.txt    exaktes Transkript dazu
+├── oma.wav
+└── oma.txt
+```
+
+Dieselbe Konvention wie beim CLI-Aufruf, also lassen sich Stimmen auch von Hand
+hineinkopieren — das Verzeichnis wird bei jeder Abfrage neu gelesen, ein
+Neustart ist nicht nötig. In der UI erscheinen sie als Dropdown; eine frisch
+hochgeladene Referenz kann über „Speichern unter" direkt abgelegt werden.
+
+Stimmnamen dürfen nur Buchstaben, Ziffern, `-` und `_` enthalten. Das ist keine
+Kosmetik: der Name kommt aus einer HTTP-Anfrage und landet in einem Dateipfad.
+
+Eine WAV ohne zugehöriges `.txt` (oder umgekehrt) wird ignoriert — das
+Base-Modell braucht beides, eine halbe Stimme anzubieten wäre irreführend.
+
+### Audio herunterladen
+
+Die WebUI sammelt alle Audio-Chunks eines Durchlaufs und bietet sie als **eine**
+WAV-Datei zum Download an. Nötig ist das, weil der Server pro Satz eine eigene
+WAV mit eigenem Header schickt — die Chunks werden im Browser wieder zu einer
+durchgehenden Datei zusammengesetzt.
 
 ## Einmal-Modus (ohne Server)
 
@@ -110,6 +174,7 @@ Alles über Umgebungsvariablen, Defaults in [src/main.rs](src/main.rs):
 
 | Variable       | Default                                     | Bedeutung                                   |
 | -------------- | ------------------------------------------- | ------------------------------------------- |
+| `MODE`         | `full`                                      | `tts` = nur Text-to-Speech, siehe unten     |
 | `BIND`         | `127.0.0.1:8080`                            | Adresse des Web-Servers                     |
 | `LLM_ENDPOINT` | `http://localhost:11434/v1`                 | OpenAI-kompatible Basis-URL                 |
 | `LLM_MODEL`    | `gemma4:e2b`                                | Modellname beim Endpunkt                    |
@@ -118,6 +183,7 @@ Alles über Umgebungsvariablen, Defaults in [src/main.rs](src/main.rs):
 | `TTS_SPEAKER`  | erster Sprecher des Checkpoints             | Preset-Stimme                               |
 | `REF_WAV`      | —                                           | Referenz-Audio → der Agent spricht geklont  |
 | `REF_TXT`      | —                                           | Transkript dazu (nur zusammen mit `REF_WAV`)|
+| `VOICES_DIR`   | `voices`                                    | Ablage gespeicherter Voice-Clones           |
 | `TTS_DTYPE`    | `f32`                                       | `f16` spart Speicher, siehe unten           |
 | `ASR_DTYPE`    | `f16`                                       | `f32` kostet ~1,5 GB mehr                   |
 | `TTS_STREAM`   | `1`                                         | `0` = ganzer Satz am Stück, siehe unten     |
@@ -193,9 +259,42 @@ umstellbar.
 | Route          | Body                                        | Antwort                    |
 | -------------- | ------------------------------------------- | -------------------------- |
 | `GET /`        | —                                           | WebUI                      |
-| `GET /api/config` | —                                        | `{"sample_rate": 16000}`   |
-| `POST /api/tts`| Text (`text/plain`)                         | SSE                        |
-| `POST /api/s2s`| rohes Mono-PCM, little-endian `f32`, 16 kHz | SSE                        |
+| `GET /api/config` | —                                        | Fähigkeiten, siehe unten   |
+| `GET /api/voices` | —                                        | `["johannes", "oma"]`      |
+| `POST /api/tts`| JSON, siehe unten                           | SSE                        |
+| `POST /api/s2s`| rohes Mono-PCM, little-endian `f32`, 16 kHz | SSE (409 bei `MODE=tts`)   |
+
+`GET /api/config`:
+
+```json
+{
+  "speech_to_speech": true,
+  "sample_rate": 16000,
+  "languages": ["auto", "chinese", "english", "french", "german", "…"],
+  "voices": ["aiden", "dylan", "eric", "ono_anna", "ryan", "serena", "…"],
+  "voice_cloning": false,
+  "saved_voices": ["johannes", "oma"]
+}
+```
+
+`POST /api/tts` — alles außer `text` ist optional:
+
+```json
+{
+  "text": "Hallo Welt.",
+  "language": "german",
+  "speaker": "serena",
+  "voice": "johannes",
+  "reference_wav": "<base64 einer WAV-Datei>",
+  "reference_text": "Transkript der Referenz",
+  "save_as": "johannes"
+}
+```
+
+`voice` (gespeicherte Stimme) und `reference_wav`/`reference_text` (frische
+Referenz) schließen sich aus — beides zusammen ist ein 400, statt dass der
+Server rät. `save_as` legt die hochgeladene Referenz unter dem Namen ab und
+braucht deshalb `reference_wav` + `reference_text`.
 
 SSE-Events: `{"type":"transcript"|"delta"|"audio"|"error"|"done", …}`, Audio
 als base64-kodiertes WAV.
