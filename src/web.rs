@@ -35,7 +35,7 @@ use tokio::sync::mpsc;
 
 use crate::pipeline::{Event, Pipeline};
 use crate::tts::{Reference, SpeechRequest};
-use crate::voices::{REFERENCE_SAMPLE_RATE, VoiceStore};
+use crate::voices::VoiceStore;
 
 /// Das komplette Frontend — eine Datei, alles inline.
 const INDEX_HTML: &str = include_str!("../static/index.html");
@@ -268,15 +268,14 @@ fn build_reference(
             Err("Transkript ohne Referenz-Audio — Voice Cloning braucht beides.".to_string())
         }
         (Some(wav), Some(transcript)) => {
-            let bytes = decode_base64(&wav)?;
+            let wav = decode_base64(&wav)?;
 
-            let samples = crane::audio::decode_wav(&bytes, REFERENCE_SAMPLE_RATE)
+            // Nur Lesbarkeit prüfen — resampled wird später auf dem
+            // TTS-Thread mit der Rate, die das Modell vorgibt.
+            crate::voices::validate_wav(&wav)
                 .map_err(|e| format!("Referenz-Audio nicht lesbar (WAV erwartet): {e:#}"))?;
 
-            Ok(Some(Reference {
-                samples,
-                transcript,
-            }))
+            Ok(Some(Reference { wav, transcript }))
         }
     }
 }

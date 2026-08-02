@@ -15,8 +15,21 @@ use anyhow::{Context, Result};
 
 use crate::tts::Reference;
 
-/// Sample-Rate, die der Speaker-Encoder von Qwen3-TTS erwartet.
-pub const REFERENCE_SAMPLE_RATE: u32 = 16_000;
+/// Nur zur Lesbarkeitsprüfung: mit welcher Rate hier dekodiert wird, ist
+/// egal — das Ergebnis wird verworfen. Die Rate, die wirklich zählt, kennt
+/// nur das geladene Modell ([`crate::tts::Capabilities`]), und dort wird auch
+/// dekodiert.
+const PRUEF_RATE: u32 = 24_000;
+
+/// Prüfen, ob `wav` eine lesbare WAV-Datei ist.
+///
+/// Damit ein kaputter Upload als HTTP 400 auffällt und nicht erst mitten im
+/// SSE-Stream als Synthese-Fehler.
+pub fn validate_wav(wav: &[u8]) -> Result<()> {
+    crane::audio::decode_wav(wav, PRUEF_RATE)
+        .context("Referenz-Audio ist keine lesbare WAV-Datei")?;
+    Ok(())
+}
 
 /// Längenlimit für Stimmnamen — hält Dateinamen handhabbar.
 const MAX_NAME_LEN: usize = 64;
@@ -62,23 +75,18 @@ impl VoiceStore {
     }
 
     /// Eine gespeicherte Stimme als Referenz laden.
+    ///
+    /// Liefert die WAV-Bytes unverändert — resampled wird erst auf dem
+    /// TTS-Thread, der die richtige Rate kennt.
     pub fn load(&self, name: &str) -> Result<Reference> {
         let name = sanitize(name)?;
 
         let transcript = std::fs::read_to_string(self.transcript_path(&name))
             .with_context(|| format!("Transkript der Stimme '{name}' nicht lesbar"))?;
-        let samples = crane::audio::load_wav_f32(
-            self.audio_path(&name)
-                .to_str()
-                .context("Pfad enthält ungültiges UTF-8")?,
-            REFERENCE_SAMPLE_RATE,
-        )
-        .with_context(|| format!("Aufnahme der Stimme '{name}' nicht lesbar"))?;
+        let wav = std::fs::read(self.audio_path(&name))
+            .with_context(|| format!("Aufnahme der Stimme '{name}' nicht lesbar"))?;
 
-        Ok(Reference {
-            samples,
-            transcript,
-        })
+        Ok(Reference { wav, transcript })
     }
 
     /// Eine Stimme ablegen; eine gleichnamige wird überschrieben.
@@ -93,8 +101,7 @@ impl VoiceStore {
             !transcript.trim().is_empty(),
             "Transkript darf nicht leer sein"
         );
-        crane::audio::decode_wav(wav, REFERENCE_SAMPLE_RATE)
-            .context("Referenz-Audio ist keine lesbare WAV-Datei")?;
+        validate_wav(wav)?;
 
         std::fs::create_dir_all(&self.dir)
             .with_context(|| format!("Stimmen-Verzeichnis nicht anlegbar: {}", self.dir.display()))?;

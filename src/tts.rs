@@ -33,10 +33,17 @@ impl AudioChunk {
     }
 }
 
-/// Referenz-Aufnahme für Voice Cloning: Audio plus exaktes Transkript.
+/// Referenz-Aufnahme für Voice Cloning: WAV-Datei plus exaktes Transkript.
+///
+/// Bewusst die **rohen WAV-Bytes** und keine fertigen Samples: der
+/// Speaker-Encoder erwartet eine ganz bestimmte Sample-Rate, und die steht in
+/// der `config.json` des Checkpoints. Dekodiert wird deshalb erst auf dem
+/// TTS-Thread, wo das Modell danach gefragt werden kann. Vorher stand hier
+/// eine hartkodierte Rate — mit 16 kHz statt 24 kHz klang die geklonte Stimme
+/// um den Faktor 1,5 zu hoch.
 #[derive(Debug, Clone)]
 pub struct Reference {
-    pub samples: Vec<f32>,
+    pub wav: Vec<u8>,
     pub transcript: String,
 }
 
@@ -96,6 +103,9 @@ pub struct Capabilities {
     pub speakers: Vec<String>,
     /// `true` = Base-Checkpoint, spricht nur mit Referenz-Audio.
     pub cloning: bool,
+    /// Sample-Rate, auf die Referenz-Aufnahmen gebracht werden müssen.
+    /// Kommt aus dem Checkpoint, nicht aus einer Konstanten.
+    pub speaker_encoder_sample_rate: u32,
 }
 
 /// Ein Auftrag an den Modell-Thread: Anfrage rein, Audio-Chunks zurück.
@@ -190,6 +200,7 @@ fn read_capabilities(model: &Model) -> Capabilities {
         languages,
         speakers,
         cloning: model.config.tts_model_type.as_deref() == Some("base"),
+        speaker_encoder_sample_rate: model.speaker_encoder_sample_rate(),
     }
 }
 
@@ -214,14 +225,19 @@ fn synthesize_blocking(
     let reference = req.reference.as_ref().or(cfg.reference.as_ref());
 
     if let Some(reference) = reference {
-        let chunk = model
-            .generate_voice_clone(
-                text,
-                language,
-                &reference.samples,
-                reference.transcript.trim(),
-                &cfg.opts,
-            )
+        // Die Referenz erst hier dekodieren: nur an dieser Stelle ist die vom
+        // Speaker-Encoder erwartete Rate bekannt.
+        let chunk = crane::audio::decode_wav(&reference.wav, model.speaker_encoder_sample_rate())
+            .context("Referenz-Audio nicht dekodierbar")
+            .and_then(|samples| {
+                model.generate_voice_clone(
+                    text,
+                    language,
+                    &samples,
+                    reference.transcript.trim(),
+                    &cfg.opts,
+                )
+            })
             .and_then(|(audio, sr)| to_chunk(&audio, sr));
         let _ = out.send(chunk);
         return;

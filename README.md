@@ -132,6 +132,13 @@ Kosmetik: der Name kommt aus einer HTTP-Anfrage und landet in einem Dateipfad.
 Eine WAV ohne zugehöriges `.txt` (oder umgekehrt) wird ignoriert — das
 Base-Modell braucht beides, eine halbe Stimme anzubieten wäre irreführend.
 
+Die Sample-Rate der Aufnahme ist egal: resampled wird erst im TTS-Thread, und
+zwar auf die Rate, die das geladene Checkpoint über
+`speaker_encoder_sample_rate()` meldet (bei Qwen3-TTS 24 kHz). Deshalb reicht
+die Referenz als **rohe WAV-Bytes** durch die ganze Kette — eine hartkodierte
+Rate an irgendeiner Zwischenstation ließ die geklonte Stimme sonst um genau
+den Ratenfaktor zu hoch klingen.
+
 ### Audio herunterladen
 
 Die WebUI sammelt alle Audio-Chunks eines Durchlaufs und bietet sie als **eine**

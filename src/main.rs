@@ -64,9 +64,6 @@ const SYSTEM_PROMPT: &str = "Du bist ein gesprochener Assistent. Antworte auf De
 kurz und in vollständigen Sätzen. Keine Aufzählungen, keine Formatierung, keine Emojis \
 — alles, was du schreibst, wird vorgelesen.";
 
-/// Sample-Rate, die der Speaker-Encoder für Referenz-Audio erwartet.
-const SPEAKER_ENCODER_SR: u32 = 16_000;
-
 /// Umgebungsvariable lesen, sonst den Default nehmen.
 fn env_or(key: &str, default: &str) -> String {
     std::env::var(key).unwrap_or_else(|_| default.to_string())
@@ -116,15 +113,14 @@ fn asr_dtype() -> DType {
     dtype("ASR_DTYPE", DType::F16)
 }
 
+/// Referenz-Aufnahme laden — als rohe WAV-Bytes; auf die richtige Rate
+/// gebracht wird sie erst im TTS-Thread.
 fn load_reference(wav_path: &str, txt_path: &str) -> Result<Reference> {
     let transcript = std::fs::read_to_string(txt_path)
         .with_context(|| format!("Transkript nicht lesbar: {txt_path}"))?;
-    let samples = crane::audio::load_wav_f32(wav_path, SPEAKER_ENCODER_SR)
+    let wav = std::fs::read(wav_path)
         .with_context(|| format!("Referenz-Audio nicht lesbar: {wav_path}"))?;
-    Ok(Reference {
-        samples,
-        transcript,
-    })
+    Ok(Reference { wav, transcript })
 }
 
 fn tts_config(model_path: String, reference: Option<Reference>) -> TtsConfig {
@@ -176,7 +172,10 @@ async fn serve(device: Device) -> Result<()> {
     let caps = tts.capabilities();
     println!("Sprachen  : {}", caps.languages.join(", "));
     if caps.cloning {
-        println!("Stimme    : Voice Cloning (Base-Checkpoint, Referenz nötig)");
+        println!(
+            "Stimme    : Voice Cloning (Base-Checkpoint, Referenz wird auf {} Hz gebracht)",
+            caps.speaker_encoder_sample_rate
+        );
     } else {
         println!("Stimmen   : {}", caps.speakers.join(", "));
     }
