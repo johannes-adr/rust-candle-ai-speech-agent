@@ -1,3 +1,13 @@
+# Quick setup voice cloning
+```sh
+# Für voice cloning:
+hf download Qwen/Qwen3-TTS-12Hz-0.6B-Base --local-dir models/Qwen3-TTS-12Hz-0.6B-Base
+open http://127.0.0.1:8080
+MODE=tts TTS_MODEL=models/Qwen3-TTS-12Hz-0.6B-Base cargo run --release
+```
+
+----
+
 # rust-candle-ai-speech-agent
 
 Sprach-Agent in Rust: **Speech-to-Speech**, **Text-to-Speech** und **Voice
