@@ -1,6 +1,6 @@
 # Quick setup voice cloning
 ```sh
-# Für voice cloning:
+# Für voice cloning. hf is huggingface cli
 hf download Qwen/Qwen3-TTS-12Hz-0.6B-Base --local-dir models/Qwen3-TTS-12Hz-0.6B-Base
 open http://127.0.0.1:8080
 MODE=tts TTS_MODEL=models/Qwen3-TTS-12Hz-0.6B-Base cargo run --release
