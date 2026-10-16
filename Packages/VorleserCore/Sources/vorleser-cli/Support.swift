@@ -1,7 +1,7 @@
 // Kleine Hilfen der Kommandozeile: Ausgabe auf stderr, Zeitformat, Speicherspitze.
 import Darwin
 import Foundation
-import Speech
+import VorleserSpeech
 
 func err(_ s: String, terminator: String = "\n") {
     FileHandle.standardError.write(Data((s + terminator).utf8))
@@ -48,7 +48,7 @@ func normalizedStyle(_ s: String) -> String {
 
 func locateVoices(_ override: String?) throws -> VoiceStore {
     if let override {
-        let store = VoiceStore(directory: URL(fileURLWithPath: override, isDirectory: true))
+        let store = VoiceStore(directory: URL(fileURLWithPath: override, isDirectory: true), customDirectory: RecordedVoiceStore.defaultDirectory)
         guard !store.allPresets.isEmpty else { throw CLIError("Keine presets.json in \(override)") }
         return store
     }

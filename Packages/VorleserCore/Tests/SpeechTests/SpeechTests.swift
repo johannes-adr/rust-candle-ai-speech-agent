@@ -3,7 +3,7 @@ import Foundation
 import Testing
 import TextPrep
 
-@testable import Speech
+@testable import VorleserSpeech
 
 @Test func everyLanguageHasQwenName() {
     let names = Language.allCases.map(\.qwenName)

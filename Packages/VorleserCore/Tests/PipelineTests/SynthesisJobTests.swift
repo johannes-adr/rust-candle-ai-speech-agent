@@ -2,7 +2,7 @@ import AVFoundation
 import AudioOut
 import Foundation
 import Projects
-import Speech
+import VorleserSpeech
 import Testing
 import TextPrep
 @testable import Pipeline

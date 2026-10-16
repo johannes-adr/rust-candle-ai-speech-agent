@@ -2,7 +2,7 @@ import AVFoundation
 import Foundation
 import Testing
 import TextPrep
-@testable import Speech
+@testable import VorleserSpeech
 
 /// Eingechecktes `Resources/Voices` (fünf Pfadteile über dieser Datei).
 private func repoVoices() -> VoiceStore {

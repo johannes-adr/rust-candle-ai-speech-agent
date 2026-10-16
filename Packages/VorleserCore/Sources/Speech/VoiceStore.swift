@@ -29,9 +29,12 @@ public struct VoiceStore: Sendable {
     /// Englische Stilbeschreibung für VoiceDesign.
     public let styleDesign: [String: String]
     private let byLanguage: [Language: [VoicePreset]]
+    /// Eigene (aufgenommene/importierte) Stimmen; `nil` = nur eingebaute Stimmen.
+    public let custom: RecordedVoiceStore?
 
-    public init(directory: URL) {
+    public init(directory: URL, customDirectory: URL? = nil) {
         self.directory = directory
+        self.custom = customDirectory.map { RecordedVoiceStore(directory: $0) }
         let parsed = Self.parse(directory.appending(path: "presets.json"))
         self.styles = parsed.styles
         self.styleDesign = parsed.styleDesign
@@ -56,7 +59,7 @@ public struct VoiceStore: Sendable {
             }
         }
         for c in candidates where FileManager.default.fileExists(atPath: c.appending(path: "presets.json").path) {
-            return VoiceStore(directory: c)
+            return VoiceStore(directory: c, customDirectory: RecordedVoiceStore.defaultDirectory)
         }
         return nil
     }
@@ -95,6 +98,8 @@ public struct VoiceStore: Sendable {
     /// Baut die `Voice` für die Engine. Fehlt der Stil, nimmt `fallback` einen vorhandenen
     /// (bevorzugt `calm`); sonst `nil`. Ohne Stilangabe gilt dasselbe.
     public func voice(id: String, style: String?, fallback: Bool = false) -> Voice? {
+        // Eigene Stimmen haben nur eine Referenz; der Stil spielt keine Rolle (Base ignoriert ihn ohnehin).
+        if id.hasPrefix(RecordedVoiceStore.idPrefix) { return custom?.voice(id: id) }
         guard let preset = preset(id: id) else { return nil }
         let available = availableStyles(voiceID: id)
         var chosen = style.flatMap { available.contains($0) ? $0 : nil }
@@ -106,6 +111,11 @@ public struct VoiceStore: Sendable {
         return Voice(
             id: id, name: preset.name, language: preset.language, kind: .preset,
             referenceAudio: url, referenceText: text, description: preset.design)
+    }
+
+    /// Eigene Stimmen einer Sprache (leer ohne `custom`).
+    public func recordedVoices(for language: Language) -> [RecordedVoiceInfo] {
+        custom?.list(language: language) ?? []
     }
 
     // MARK: Datei lesen

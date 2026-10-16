@@ -2,7 +2,7 @@
 import AudioOut
 import Foundation
 import Projects
-import Speech
+import VorleserSpeech
 import TextPrep
 
 /// Woher der Text kommt.
