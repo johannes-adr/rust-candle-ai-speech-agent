@@ -30,7 +30,7 @@ let package = Package(
             ]
         ),
         .target(name: "AudioOut", dependencies: ["CLAME"]),
-        .target(name: "Projects", dependencies: ["TextPrep"]),
+        .target(name: "Projects", dependencies: ["TextPrep", "AudioOut"]),
         .executableTarget(
             name: "vorleser-cli",
             dependencies: ["DocumentImport", "TextPrep", "Speech", "AudioOut", "Projects"]
@@ -45,6 +45,6 @@ let package = Package(
         ),
         .testTarget(name: "SpeechTests", dependencies: ["Speech"]),
         .testTarget(name: "AudioOutTests", dependencies: ["AudioOut"]),
-        .testTarget(name: "ProjectsTests", dependencies: ["Projects"]),
+        .testTarget(name: "ProjectsTests", dependencies: ["Projects", "TextPrep", "AudioOut"]),
     ]
 )
