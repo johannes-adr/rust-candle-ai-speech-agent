@@ -3,6 +3,8 @@
 #ifndef LAME_CONFIG_H
 #define LAME_CONFIG_H
 
+/* SwiftPM definiert DEBUG im Debug-Build; LAME würde dann Diagnose auf stdout drucken. */
+#undef DEBUG
 #define STDC_HEADERS 1
 #define HAVE_ALLOCA 1
 #define HAVE_ALLOCA_H 1
