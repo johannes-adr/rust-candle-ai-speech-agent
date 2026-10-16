@@ -48,7 +48,8 @@ actor LiveAudiobookService: AudiobookService {
         let synthesis = SynthesisRequest(
             title: request.title, source: source, language: request.language, voice: voice,
             style: request.style, tempo: request.tempo, resumeProjectID: request.resumeProjectID,
-            sourceData: request.sourceData, sourceExtension: request.sourceExtension)
+            sourceData: request.sourceData, sourceExtension: request.sourceExtension,
+            writeChapterFiles: request.writeChapterFiles)
 
         var finishing = false
         for await event in job.start(synthesis) {

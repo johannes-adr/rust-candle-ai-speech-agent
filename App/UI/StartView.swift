@@ -16,6 +16,7 @@ struct StartView: View {
                     systemImage: "square.and.pencil", title: "start.text.title", subtitle: "start.text.sub"
                 ) { model.screen = .typeText }
             }
+            CameraCard { model.startCamera() }
             Label("start.drop", systemImage: "arrow.down.doc")
                 .foregroundStyle(Color.omaSecondaryText)
                 .frame(maxWidth: .infinity)

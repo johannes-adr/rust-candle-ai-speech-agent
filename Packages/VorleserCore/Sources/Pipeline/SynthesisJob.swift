@@ -499,8 +499,10 @@ public actor SynthesisJob {
         options.chapterTitles = titles
         options.chapterWord = Self.chapterWord(for: project.language)
         let base = target.deletingPathExtension().lastPathComponent
-        options.chapterDirectory = target.deletingLastPathComponent()
-            .appending(path: base + " – " + options.chapterWord, directoryHint: .isDirectory)
+        options.chapterDirectory = request.writeChapterFiles
+            ? target.deletingLastPathComponent()
+                .appending(path: base + " – " + options.chapterWord, directoryHint: .isDirectory)
+            : nil
 
         let opts = options
         do {

@@ -91,7 +91,9 @@ enum DebugLaunch {
             await waitUntil { model.screen == .done }
         case "problem":
             model.screen = .problem("problem.noText")
-        default: break
+        default:
+            // Helfer-Einstellungen und Kamera-Ablauf (App/Helper/DebugDemos.swift)
+            if await HelperDemos.run(demo, model) { return }
         }
 
         try? await Task.sleep(for: .seconds(1))

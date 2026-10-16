@@ -38,6 +38,7 @@ struct RootView: View {
         case .voice: VoiceView()
         case .comingSoon: ComingSoonView()
         case .describeVoice: DescribeVoiceView()
+        case .camera: if let flow = model.camera { CameraView(flow: flow) }
         case .ownVoice: if let flow = model.ownVoice { OwnVoiceView(flow: flow) }
         case .working: WorkingView()
         case .done: DoneView()

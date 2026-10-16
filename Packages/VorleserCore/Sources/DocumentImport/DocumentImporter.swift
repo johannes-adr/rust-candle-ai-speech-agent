@@ -1,4 +1,5 @@
 import AppKit
+import ImageIO
 import Foundation
 import TextPrep
 import PDFKit
@@ -18,6 +19,18 @@ public struct ImportResult: Sendable {
     /// Seiten (0-basiert), die per OCR gelesen wurden.
     public var ocrPages: [Int]
     public var language: String?
+    /// Nur Fotos (`importPhotos`): Seite (0-basiert) → Vierteldrehungen im Uhrzeigersinn, die nötig waren.
+    public var rotatedPages: [Int: Int] = [:]
+    /// Nur Fotos: Seiten (0-basiert), aus denen kein Text gelesen werden konnte.
+    public var unreadablePages: [Int] = []
+
+    public init(document: TextDocument, report: CleaningReport?, pageCount: Int, ocrPages: [Int], language: String?) {
+        self.document = document
+        self.report = report
+        self.pageCount = pageCount
+        self.ocrPages = ocrPages
+        self.language = language
+    }
 }
 
 /// Liest PDF, Word/ODT/RTF/HTML, Text und Bilder in ein `TextDocument`.
@@ -127,17 +140,10 @@ public struct DocumentImporter: Sendable {
     // MARK: Bilder (Handy-Foto, Scan als Bilddatei)
 
     private func importImage(at url: URL, languageHint: String?) async throws -> ImportResult {
-        guard let image = OCR.loadImage(at: url) else { throw DocumentImportError.unreadable(url.lastPathComponent) }
-        let size = CGSize(width: image.width, height: image.height)
-        var lines = try await OCR.recognize(image: image, pageSize: size, pageIndex: 0, language: languageHint, engine: ocrEngine)
-        var language = languageHint ?? TextHelpers.detectLanguage(lines.map(\.text).joined(separator: " "))
-        if languageHint == nil, language != nil, !OCR.visionLanguages(for: language).isEmpty {
-            lines = try await OCR.recognize(image: image, pageSize: size, pageIndex: 0, language: language, engine: ocrEngine)
+        guard let src = CGImageSourceCreateWithURL(url as CFURL, nil), CGImageSourceGetCount(src) > 0 else {
+            throw DocumentImportError.unreadable(url.lastPathComponent)
         }
-        let (doc, report) = cleaner.clean(pages: [PageLayout(index: 0, size: size, lines: lines, fromOCR: true)], language: language)
-        language = report.language
-        guard !doc.blocks.isEmpty else { throw DocumentImportError.empty }
-        return ImportResult(document: doc, report: report, pageCount: 1, ocrPages: [0], language: language)
+        return try await importPhotos(at: [url], languageHint: languageHint)
     }
 
     // MARK: Word, ODT, RTF, HTML

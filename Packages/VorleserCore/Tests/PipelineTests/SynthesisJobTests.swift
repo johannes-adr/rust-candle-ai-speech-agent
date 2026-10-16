@@ -277,6 +277,19 @@ private func mp3Seconds(_ url: URL) throws -> Double {
     #expect(abs(sum - r.durationSeconds) < 2.5)
 }
 
+@Test func chapterFilesCanBeSwitchedOff() async throws {
+    let env = makeEnv(); defer { env.cleanup() }
+    let job = SynthesisJob(engine: FakeEngine(), store: env.store, config: config())
+    var req = request(document(paragraphs: 4, headings: true), env: env)
+    req.writeChapterFiles = false
+    let r = try #require(result(await collect(job, req)))
+    #expect(r.chapterFiles.isEmpty)
+    #expect(FileManager.default.fileExists(atPath: r.fileURL.path))
+    let folder = r.fileURL.deletingLastPathComponent()
+    let names = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
+    #expect(names.allSatisfy { !$0.contains("Teil") }, "kein Kapitelordner")
+}
+
 @Test func tempoShortensOutput() async throws {
     let env = makeEnv(); defer { env.cleanup() }
     let doc = document(paragraphs: 3)

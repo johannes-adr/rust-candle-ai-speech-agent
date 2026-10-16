@@ -29,6 +29,10 @@
 	<string>public.app-category.productivity</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>26.0</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Vorleser nutzt die Kamera Ihres iPhones, um Briefe und Buchseiten zum Vorlesen zu fotografieren.</string>
+	<key>NSCameraUseContinuityCameraDeviceType</key>
+	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Vorleser nimmt Ihre Stimme auf, damit vorgelesen werden kann wie Sie sprechen.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
