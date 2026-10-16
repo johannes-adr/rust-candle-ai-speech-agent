@@ -1,10 +1,12 @@
 // Phase 5: Modellordner verwalten.
-//   vorleser-cli models status                 Zustand der gepinnten Modelle
+//   vorleser-cli models status                 Zustand der gewählten bzw. eingebauten Modelle
 //   vorleser-cli models install [--bits 4] [--voice-design] [--no-cache-import]
 //   vorleser-cli models verify                 volle SHA-256-Prüfung
 //   vorleser-cli models manifest <repo> <rev>  Manifest aus der HF-API erzeugen (Entwickler)
 //   vorleser-cli models use <base|voiceDesign> <repo> [--bits 4] [--revision main]
-//                                              Modell wechseln: models.json + Manifest schreiben
+//                                              Standard im Quellbaum ändern: models.json + Manifest schreiben
+// Die Auswahl je Rolle (App: Helfer-Einstellungen › Modell) wirkt über `ModelSelection`; dieselbe
+// Logik nutzt die App, siehe `ModelChooser`.
 import ArgumentParser
 import Foundation
 import ModelSetup
@@ -17,14 +19,17 @@ struct Models: AsyncParsableCommand {
         subcommands: [ModelsStatus.self, ModelsInstall.self, ModelsVerify.self, ModelsManifest.self, ModelsUse.self])
 }
 
-private func wantedModels(bits: Int, voiceDesign: Bool) throws -> [ModelManifest] {
+/// Rollen, die die CLI betreut: immer `base`, optional `voiceDesign`.
+private func roles(voiceDesign: Bool) -> [ModelKind] {
+    voiceDesign ? [.base, .voiceDesign] : [.base]
+}
+
+private func wantedModels(bits: Int, voiceDesign: Bool, store: ModelStore) throws -> [ModelManifest] {
     guard let b = ModelBits(rawValue: bits) else { throw ValidationError("--bits muss 4 oder 8 sein") }
-    var kinds: [ModelKind] = [.base]
-    if voiceDesign { kinds.append(.voiceDesign) }
-    return try kinds.map { kind in
-        guard let spec = ModelSpec.pinned(kind, bits: kind == .voiceDesign ? .four : b),
-              let manifest = ModelManifest.bundled(for: spec)
-        else { throw CLIError("Kein Manifest für \(kind) \(b.rawValue)-bit.") }
+    return try roles(voiceDesign: voiceDesign).map { kind in
+        let roleBits = kind == .voiceDesign ? ModelBits.four.rawValue : b.rawValue
+        guard let manifest = ModelSelection.current(role: kind.rawValue, bits: roleBits, store: store)?.manifest
+        else { throw CLIError("Kein Manifest für \(kind) \(roleBits)-bit.") }
         return manifest
     }
 }
@@ -32,7 +37,7 @@ private func wantedModels(bits: Int, voiceDesign: Bool) throws -> [ModelManifest
 private func gb(_ bytes: Int64) -> String { String(format: "%.2f GB", Double(bytes) / 1e9) }
 
 struct ModelsStatus: AsyncParsableCommand {
-    static let configuration = CommandConfiguration(commandName: "status", abstract: "Zustand der gepinnten Modelle.")
+    static let configuration = CommandConfiguration(commandName: "status", abstract: "Zustand der gewählten bzw. eingebauten Modelle.")
     @Option(name: .customLong("models-dir"), help: "Modellordner (Standard: Application Support/Vorleser/Models).")
     var modelsDir: String?
 
@@ -40,8 +45,10 @@ struct ModelsStatus: AsyncParsableCommand {
         let store = modelsDir.map { ModelStore(root: URL(fileURLWithPath: $0)) } ?? .standard
         print("Modellordner: \(store.root.path)")
         for kind in ModelKind.allCases { for bits in ModelBits.allCases {
-            guard let spec = ModelSpec.pinned(kind, bits: bits), let m = ModelManifest.bundled(for: spec) else { continue }
-            print("  \(kind) \(bits.rawValue)-bit  \(m.ref.repo)@\(m.ref.revision.prefix(8))  \(gb(m.totalBytes))  \(store.status(of: m))")
+            guard let current = ModelSelection.current(role: kind.rawValue, bits: bits.rawValue, store: store),
+                  let m = current.manifest else { continue }
+            let chosen = current.isChosen ? " (gewählt)" : ""
+            print("  \(kind) \(bits.rawValue)-bit  \(m.ref.repo)@\(m.ref.revision.prefix(8))\(chosen)  \(gb(m.totalBytes))  \(store.status(of: m))")
         } }
     }
 }
@@ -57,8 +64,8 @@ struct ModelsInstall: AsyncParsableCommand {
     @Flag(help: "Vorhandene Dateien neu mit SHA-256 prüfen.") var repair = false
 
     func run() async throws {
-        let manifests = try wantedModels(bits: bits, voiceDesign: voiceDesign)
         let store = modelsDir.map { ModelStore(root: URL(fileURLWithPath: $0)) } ?? .standard
+        let manifests = try wantedModels(bits: bits, voiceDesign: voiceDesign, store: store)
         let cache: HFCacheImporter? = noCacheImport ? nil : HFCacheImporter(
             cacheRoot: cacheDir.map { URL(fileURLWithPath: $0) } ?? ModelRef.defaultHuggingFaceCacheRoot)
         let installer = ModelInstaller(store: store, cache: cache)
@@ -89,7 +96,7 @@ struct ModelsVerify: AsyncParsableCommand {
     func run() async throws {
         let store = modelsDir.map { ModelStore(root: URL(fileURLWithPath: $0)) } ?? .standard
         for kind in ModelKind.allCases { for bits in ModelBits.allCases {
-            guard let spec = ModelSpec.pinned(kind, bits: bits), let m = ModelManifest.bundled(for: spec) else { continue }
+            guard let m = ModelSelection.current(role: kind.rawValue, bits: bits.rawValue, store: store)?.manifest else { continue }
             guard store.status(of: m) == .ready else { print("\(kind) \(bits.rawValue)-bit: \(store.status(of: m))"); continue }
             let started = Date()
             let result = try store.verify(m)
@@ -116,7 +123,7 @@ struct ModelsManifest: AsyncParsableCommand {
 struct ModelsUse: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "use",
-        abstract: "Modell wechseln: trägt Repo + Commit in models.json ein und legt das Manifest daneben. Danach neu bauen.")
+        abstract: "Eingebauten Standard wechseln: trägt Repo + Commit in models.json ein und legt das Manifest daneben. Danach neu bauen.")
     @Argument(help: "base oder voiceDesign") var kind: String
     @Argument(help: "Hugging-Face-Repo, z. B. mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit") var repo: String
     @Option(help: "Platz in der App: 4 oder 8 (Einstellung „Qualität“).") var bits = 4
@@ -125,9 +132,9 @@ struct ModelsUse: AsyncParsableCommand {
     func run() async throws {
         guard let k = ModelKind(rawValue: kind) else { throw ValidationError("Art muss base oder voiceDesign sein") }
         guard let b = ModelBits(rawValue: bits) else { throw ValidationError("--bits muss 4 oder 8 sein") }
-        let sha = try await resolveCommit(repo: repo, revision: revision)
-        let ref = ModelRef(repo: repo, revision: sha)
-        let manifest = try await ManifestFetcher.fetch(ref: ref)
+        // Auflösen, Dateiliste holen und grob prüfen: dieselbe Logik wie in der App.
+        let manifest = try await ModelChooser.prepare(repo: repo, revision: revision, role: k.rawValue)
+        let ref = manifest.ref
 
         // Quellordner der mitgelieferten Manifeste (Entwicklerwerkzeug, läuft im Repo).
         let dir = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
@@ -147,18 +154,7 @@ struct ModelsUse: AsyncParsableCommand {
         if let old, old.manifestName != ref.manifestName, !catalog.values.contains(where: { $0.manifestName == old.manifestName }) {
             try? FileManager.default.removeItem(at: dir.appendingPathComponent(old.manifestName + ".json"))
         }
-        print("\(key): \(repo)@\(sha.prefix(8)), \(manifest.files.count) Dateien, \(gb(manifest.totalBytes))")
+        print("\(key): \(repo)@\(ref.revision.prefix(8)), \(manifest.files.count) Dateien, \(gb(manifest.totalBytes))")
         print("Jetzt neu bauen; danach `vorleser-cli models install --bits \(bits)\(k == .voiceDesign ? " --voice-design" : "")`.")
-    }
-
-    private func resolveCommit(repo: String, revision: String) async throws -> String {
-        if revision.count == 40, revision.allSatisfy(\.isHexDigit) { return revision }
-        let url = URL(string: "https://huggingface.co/api/models/\(repo)/revision/\(revision)")!
-        let (data, response) = try await URLSession.shared.data(from: url)
-        guard (response as? HTTPURLResponse)?.statusCode == 200,
-              let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let sha = json["sha"] as? String
-        else { throw CLIError("Repo oder Revision nicht gefunden: \(repo)@\(revision)") }
-        return sha
     }
 }
