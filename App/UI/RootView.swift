@@ -28,6 +28,7 @@ struct RootView: View {
         case .voice: VoiceView()
         case .comingSoon: ComingSoonView()
         case .describeVoice: DescribeVoiceView()
+        case .ownVoice: if let flow = model.ownVoice { OwnVoiceView(flow: flow) }
         case .working: WorkingView()
         case .done: DoneView()
         case .problem(let key): ProblemView(messageKey: key)

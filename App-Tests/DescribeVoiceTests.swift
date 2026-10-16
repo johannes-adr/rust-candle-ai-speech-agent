@@ -1,7 +1,7 @@
 // Ablauf „Stimme beschreiben“ ohne Modell (Attrappe des Dienstes) und Anbindung an ②.
 import Foundation
 import Pipeline
-import Speech
+import VorleserSpeech
 import TextPrep
 import XCTest
 

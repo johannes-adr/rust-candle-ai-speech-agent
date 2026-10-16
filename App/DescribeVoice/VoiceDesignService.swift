@@ -3,7 +3,7 @@
 import AVFoundation
 import Foundation
 import Pipeline
-import Speech
+import VorleserSpeech
 import TextPrep
 
 /// Eine Stimmprobe zum Anhören.
@@ -49,14 +49,14 @@ enum SharedSpeechEngine {
 
 actor LiveVoiceDesignService: VoiceDesignService {
     private let engine: any SpeechEngine
-    private let store: DesignedVoiceStore
+    private let store: RecordedVoiceStore
     private let previewDirectory: URL
     private let translator: (any DescriptionTranslating)?
     private var last: DesignResult?
     private var lastWish: VoiceWish?
 
     init(
-        engine: any SpeechEngine = SharedSpeechEngine.shared, store: DesignedVoiceStore = .standard,
+        engine: any SpeechEngine = SharedSpeechEngine.shared, store: RecordedVoiceStore = RecordedVoiceStore(directory: VoiceLibrary.defaultCustomDirectory),
         translator: (any DescriptionTranslating)? = nil,
         previewDirectory: URL = FileManager.default.temporaryDirectory.appending(path: "Vorleser-Vorschlaege")
     ) {
@@ -104,8 +104,8 @@ actor LiveVoiceDesignService: VoiceDesignService {
         guard let result = last, let wish = lastWish, let p = result.proposals.first(where: { $0.index == index }) else {
             throw DesignServiceError.other
         }
-        return try store.save(
-            samples: p.samples, sampleRate: p.sampleRate, name: name, language: wish.readingLanguage,
-            description: wish.description, referenceText: result.referenceText, prompt: result.prompt.text, seed: p.seed)
+        return try store.saveDesigned(
+            samples: p.samples, sampleRate: p.sampleRate, referenceText: result.referenceText, name: name,
+            language: wish.readingLanguage, wish: wish.description, prompt: result.prompt.text, seed: p.seed)
     }
 }

@@ -1,6 +1,6 @@
 // Prompt-Bau und Ablauf des VoiceDesigners ohne Modell (Attrappe mit Protokoll der Aufrufe).
 import Foundation
-import Speech
+import VorleserSpeech
 import TextPrep
 import Testing
 
@@ -185,7 +185,7 @@ private let readText = String(repeating: "Heute ist ein schöner Tag. ", count: 
         VoiceWish(description: "ruhig", readingLanguage: .de), referenceText: readText, count: 1)
     #expect(result.proposals.count == 1)
     #expect(result.proposals[0].isSuspicious)
-    #expect(result.proposals[0].attempts == 3)
+    #expect(await engine.seeds.count == 3, "drei Versuche mit je eigenem Seed")
 }
 
 @Test func designerUnloadsOnEngineErrorAndRejectsEmptyWish() async {

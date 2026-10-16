@@ -9,8 +9,9 @@ let package = Package(
     products: [
         .library(name: "DocumentImport", targets: ["DocumentImport"]),
         .library(name: "TextPrep", targets: ["TextPrep"]),
-        .library(name: "Speech", targets: ["Speech"]),
+        .library(name: "VorleserSpeech", targets: ["VorleserSpeech"]),
         .library(name: "AudioOut", targets: ["AudioOut"]),
+        .library(name: "VoiceCapture", targets: ["VoiceCapture"]),
         .library(name: "Projects", targets: ["Projects"]),
         .library(name: "Pipeline", targets: ["Pipeline"]),
         .executable(name: "vorleser-cli", targets: ["vorleser-cli"]),
@@ -24,16 +25,20 @@ let package = Package(
     targets: [
         .target(name: "TextPrep"),
         .target(name: "DocumentImport", dependencies: ["TextPrep"]),
+        // Heißt `VorleserSpeech`, weil Apples Speech-Framework (SpeechAnalyzer, SFSpeechRecognizer)
+        // denselben Modulnamen hat: `import Speech` fand sonst je nach Bauzustand das falsche Modul.
+        // Der Ordner bleibt `Sources/Speech`.
         .target(
-            name: "Speech",
+            name: "VorleserSpeech",
             dependencies: [
                 "TextPrep", "AudioOut",
                 .product(name: "MLXAudioTTS", package: "mlx-audio-swift"),
                 .product(name: "MLXAudioCore", package: "mlx-audio-swift"),
                 .product(name: "MLX", package: "mlx-swift"),
-            ]
+            ],
+            path: "Sources/Speech"
         ),
-        .executableTarget(name: "spike-s1", dependencies: ["Speech", "TextPrep", "Projects"]),
+        .executableTarget(name: "spike-s1", dependencies: ["VorleserSpeech", "TextPrep", "Projects"]),
         // LAME 3.100 (LGPL) als eigenes C-Target, nur Encoder. Siehe docs/spikes/S5-mp3.md.
         .target(
             name: "CLAME",
@@ -45,16 +50,19 @@ let package = Package(
             ]
         ),
         .target(name: "AudioOut", dependencies: ["CLAME"]),
+        // Phase 3: Aufnahme, Prüfung, Spracherkennungs-Check, Import. Hängt bewusst nicht von
+        // `VorleserSpeech` ab (kein MLX) und importiert Apples Speech-Framework.
+        .target(name: "VoiceCapture", dependencies: ["TextPrep", "AudioOut"]),
         .target(name: "Projects", dependencies: ["TextPrep", "AudioOut"]),
         // Phase 1: Import → Sprache → Abschnitte → Engine → Prüfung → MP3, mit Fortsetzen.
         .target(
             name: "Pipeline",
-            dependencies: ["DocumentImport", "TextPrep", "Speech", "AudioOut", "Projects"]
+            dependencies: ["DocumentImport", "TextPrep", "VorleserSpeech", "AudioOut", "Projects"]
         ),
         .executableTarget(
             name: "vorleser-cli",
             dependencies: [
-                "DocumentImport", "TextPrep", "Speech", "AudioOut", "Projects", "Pipeline",
+                "DocumentImport", "TextPrep", "VorleserSpeech", "AudioOut", "Projects", "Pipeline", "VoiceCapture",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ],
             // SwiftPM verlinkt gegen SDK 26.0; damit meldet das Translation-Framework installierte
@@ -70,9 +78,10 @@ let package = Package(
             dependencies: ["DocumentImport", "TextPrep"],
             resources: [.copy("Fixtures")]
         ),
-        .testTarget(name: "SpeechTests", dependencies: ["Speech"]),
+        .testTarget(name: "SpeechTests", dependencies: ["VorleserSpeech"]),
         .testTarget(name: "AudioOutTests", dependencies: ["AudioOut"]),
-        .testTarget(name: "PipelineTests", dependencies: ["Pipeline", "Speech", "Projects", "TextPrep", "AudioOut"]),
+        .testTarget(name: "VoiceCaptureTests", dependencies: ["VoiceCapture", "TextPrep", "AudioOut"]),
+        .testTarget(name: "PipelineTests", dependencies: ["Pipeline", "VorleserSpeech", "Projects", "TextPrep", "AudioOut"]),
         .testTarget(name: "ProjectsTests", dependencies: ["Projects", "TextPrep", "AudioOut"]),
     ]
 )

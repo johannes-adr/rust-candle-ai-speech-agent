@@ -76,7 +76,7 @@ eine Klasse mit demselben Protokoll in `AppModel.init` (`makeService`) einsetzen
 - Portugiesisch: Oberfläche und Texte als **pt-PT**; die Entscheidung PT/BR ist offen
   (PLAN.md §7). Nur `Localizable.xcstrings`/`InfoPlist.xcstrings` und die Beschreibungen in
   `presets.json` wären zu ändern.
-- „Eigene Stimme“ führt zu „Kommt bald“ (Phase 3). „Eigener Wunsch …“ (Phase 4) fehlt.
+- „Eigene Stimme“ ist seit Phase 3 umgesetzt (siehe `docs/phase3.md`, Code in `App/OwnVoice/`). „Eigener Wunsch …“ (Phase 4) fehlt.
 - „Kurzer Text sofort vorlesen“ (ohne Schritt ③) ist nicht umgesetzt; ebenso Mitteilung
   nach Fertigstellung (nur Klang `Glass`).
 - Hörproben und Referenzaufnahmen fehlen: „Probe“ ist deaktiviert, bis

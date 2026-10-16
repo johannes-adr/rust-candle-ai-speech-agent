@@ -1,6 +1,6 @@
 // Fertige Stimmen aus Resources/Voices/presets.json (gelesen vom VoiceStore im Package).
 import Foundation
-import Speech
+import VorleserSpeech
 import TextPrep
 
 enum VoiceStyle: String, CaseIterable, Sendable, Identifiable {
@@ -38,19 +38,47 @@ struct VoiceLibrary: Sendable {
     /// Ordner mit presets.json und den Referenzaufnahmen.
     var directory: URL { store.directory }
 
-    init(directory: URL? = Bundle.main.resourceURL?.appending(path: "Voices", directoryHint: .isDirectory)) {
-        self.store = VoiceStore(directory: directory ?? URL(fileURLWithPath: "/nonexistent"))
+    init(
+        directory: URL? = Bundle.main.resourceURL?.appending(path: "Voices", directoryHint: .isDirectory),
+        customDirectory: URL = VoiceLibrary.defaultCustomDirectory
+    ) {
+        self.store = VoiceStore(directory: directory ?? URL(fileURLWithPath: "/nonexistent"), customDirectory: customDirectory)
+    }
+
+    /// Eigene Stimmen liegen in Application Support (nicht im Paket). Debug: unter `VORLESER_DATA_DIR/Voices`.
+    static var defaultCustomDirectory: URL {
+        #if DEBUG
+        let env = ProcessInfo.processInfo.environment
+        if let dir = env["VORLESER_DATA_DIR"], env["VORLESER_CUSTOM_VOICES_DIR"] == nil {
+            return URL(fileURLWithPath: dir, isDirectory: true).appending(path: "Voices", directoryHint: .isDirectory)
+        }
+        #endif
+        return RecordedVoiceStore.defaultDirectory
+    }
+
+    /// Eigene (aufgenommene) Stimmen der Sprache, für Schritt ②.
+    func recordedVoices(for language: Language) -> [PresetVoice] {
+        store.recordedVoices(for: language).map(Self.convert)
     }
 
     func voices(for language: Language) -> [PresetVoice] {
         store.presets(for: language).map(Self.convert)
     }
 
-    func voice(id: String) -> PresetVoice? { store.preset(id: id).map(Self.convert) }
+    func voice(id: String) -> PresetVoice? {
+        if let own = store.custom?.info(id: id) { return Self.convert(own) }
+        return store.preset(id: id).map(Self.convert)
+    }
 
     /// Pfad der Referenzaufnahme, nur wenn die Datei wirklich da ist.
     func referenceURL(voiceID: String, style: String) -> URL? {
-        store.referenceURL(voiceID: voiceID, style: style)
+        // Eigene Stimmen haben nur eine Aufnahme, unabhängig vom Stil.
+        if let own = store.custom?.info(id: voiceID) { return store.custom?.audioURL(id: own.id) }
+        return store.referenceURL(voiceID: voiceID, style: style)
+    }
+
+    private static func convert(_ r: RecordedVoiceInfo) -> PresetVoice {
+        PresetVoice(id: r.id, name: r.name, isFemale: false, descriptions: [:], references: [:])
     }
 
     private static func convert(_ p: VoicePreset) -> PresetVoice {

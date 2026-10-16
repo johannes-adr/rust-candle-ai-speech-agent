@@ -4,7 +4,7 @@ import AudioOut
 import CryptoKit
 import Foundation
 import Pipeline
-import Speech
+import VorleserSpeech
 import TextPrep
 
 /// Fester Lesetext je Sprache (ca. 10–12 s), neben `Voices` unter `Resources/ReadAloud`.

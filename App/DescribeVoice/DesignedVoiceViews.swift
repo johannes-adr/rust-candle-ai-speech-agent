@@ -1,6 +1,6 @@
 // Auf Bildschirm ②: Stilfrage mit „Eigener Wunsch …“ und die Karten der beschriebenen Stimmen.
 import Pipeline
-import Speech
+import VorleserSpeech
 import SwiftUI
 import TextPrep
 
@@ -11,7 +11,7 @@ struct StyleSection: View {
     var draft: Draft
 
     var body: some View {
-        let designed = DesignedVoiceStore.isDesignedID(draft.voiceID ?? "")
+        let designed = model.isDesignedVoice(draft.voiceID)
         Text("voice.styleQuestion").font(OmaStyle.bodyBold).padding(.top, 4)
         if designed {
             Text("describeVoice.styleHint").foregroundStyle(Color.omaSecondaryText)
@@ -37,7 +37,7 @@ struct DesignedVoicesSection: View {
     var draft: Draft
 
     var body: some View {
-        let voices = DesignedVoiceStore.standard.voices(for: draft.language)
+        let voices = model.library.store.designedVoices(for: draft.language)
         if !voices.isEmpty {
             Text("describeVoice.mine").font(OmaStyle.bodyBold).padding(.top, 4)
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 280), spacing: 20)], alignment: .leading, spacing: 20) {
@@ -51,7 +51,7 @@ struct DesignedVoicesSection: View {
 
 struct DesignedVoiceCard: View {
     @Environment(AppModel.self) private var model
-    var voice: Voice
+    var voice: RecordedVoiceInfo
     var selected: Bool
     @State private var playing = false
 
@@ -61,7 +61,7 @@ struct DesignedVoiceCard: View {
                 VStack(spacing: 10) {
                     Image(systemName: "sparkles").font(.system(size: 44)).foregroundStyle(Color.omaBorder)
                     Text(voice.name).font(.system(size: 30, weight: .bold)).multilineTextAlignment(.center)
-                    Text(voice.description ?? "").foregroundStyle(Color.omaSecondaryText)
+                    Text(voice.wish ?? "").foregroundStyle(Color.omaSecondaryText)
                         .multilineTextAlignment(.center).lineLimit(3)
                     if selected {
                         Label("voice.selected", systemImage: "checkmark.circle.fill").font(OmaStyle.bodyBold)
@@ -76,7 +76,9 @@ struct DesignedVoiceCard: View {
             Button {
                 if playing { PreviewPlayer.shared.stop() } else {
                     playing = true
-                    PreviewPlayer.shared.play(voice.referenceAudio) { playing = false }
+                    if let url = model.library.store.custom?.audioURL(id: voice.id) {
+                        PreviewPlayer.shared.play(url) { playing = false }
+                    }
                 }
             } label: {
                 Label(playing ? "describeVoice.listen.stop" : "voice.sample", systemImage: playing ? "stop.fill" : "play.fill")
@@ -111,12 +113,17 @@ extension AppModel {
 
     /// Name der Stimme für Anzeige und MP3-Tags (fertige oder beschriebene Stimme).
     func voiceName(_ id: String) -> String {
-        library.voice(id: id)?.name ?? DesignedVoiceStore.standard.voice(id: id)?.name ?? ""
+        library.voice(id: id)?.name ?? ""
+    }
+
+    func isDesignedVoice(_ id: String?) -> Bool {
+        guard let id, id.hasPrefix(RecordedVoiceStore.idPrefix) else { return false }
+        return library.store.custom?.isDesigned(id: id) ?? false
     }
 
     /// Bei beschriebenen Stimmen gibt es keinen Stil (steckt in der Referenz).
     func styleKey(forVoice id: String?, style: VoiceStyle) -> String? {
-        DesignedVoiceStore.isDesignedID(id ?? "") ? nil : style.rawValue
+        isDesignedVoice(id) ? nil : style.rawValue
     }
 
     private func makeDescribeModel() -> DescribeVoiceModel {
@@ -154,8 +161,9 @@ struct PreviewVoiceDesignService: VoiceDesignService {
     func save(proposal index: Int, name: String) async throws -> Voice {
         let rate = 24_000.0
         let samples = (0..<Int(rate)).map { Float(0.2 * sin(2 * Double.pi * 220 * Double($0) / rate)) }
-        return try DesignedVoiceStore.standard.save(
-            samples: samples, sampleRate: rate, name: name, language: .de, description: "Vorschau", referenceText: "Vorschau")
+        return try RecordedVoiceStore(directory: VoiceLibrary.defaultCustomDirectory).saveDesigned(
+            samples: samples, sampleRate: rate, referenceText: "Vorschau", name: name, language: .de,
+            wish: "Vorschau", prompt: nil, seed: nil)
     }
 }
 #endif

@@ -16,6 +16,8 @@ enum Screen: Equatable {
     case comingSoon
     /// Stimme beschreiben (Phase 4, App/DescribeVoice)
     case describeVoice
+    /// Geführte Aufnahme der eigenen Stimme (App/OwnVoice).
+    case ownVoice
     case working
     case done
     /// Freundliche Fehlermeldung (Schlüssel aus Localizable.xcstrings).
@@ -75,6 +77,8 @@ final class AppModel {
     /// Ablauf „Stimme beschreiben“ (App/DescribeVoice), nur auf dem Bildschirm `.describeVoice` belegt.
     var describe: DescribeVoiceModel?
     var projects: [ProjectSummary] = []
+    /// Läuft der Ablauf „Meine eigene Stimme“? (App/OwnVoice)
+    var ownVoice: OwnVoiceFlow?
 
     // Overlays (eigene große Dialoge statt kleiner Systemfenster)
     var showHelp = false
@@ -276,7 +280,7 @@ final class AppModel {
         return service.hasSample(voiceID: voiceID, style: style.rawValue)
     }
 
-    func chooseOwnVoice() { screen = .comingSoon }
+    func chooseOwnVoice() { startOwnVoice() }
 
     // MARK: Schritt 3: Arbeit
 

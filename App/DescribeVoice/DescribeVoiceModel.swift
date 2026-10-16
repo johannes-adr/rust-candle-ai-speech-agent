@@ -4,7 +4,7 @@ import AVFoundation
 import Foundation
 import Observation
 import Pipeline
-import Speech
+import VorleserSpeech
 import TextPrep
 
 /// Spielt Vorschläge und Proben ab. Genau ein Klang zugleich.

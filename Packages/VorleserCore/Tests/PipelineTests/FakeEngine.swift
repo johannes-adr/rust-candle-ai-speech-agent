@@ -1,7 +1,7 @@
 // Attrappe für die Engine: erzeugt Sinuston in der Länge, die ein Mensch bräuchte,
 // oder gezielt kaputtes Audio (NaN, zu kurz, stumm, Fehler).
 import Foundation
-import Speech
+import VorleserSpeech
 import TextPrep
 
 enum FakeBehavior: Sendable {

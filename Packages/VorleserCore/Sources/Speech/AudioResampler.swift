@@ -49,7 +49,7 @@ public enum AudioResampler {
     }
 
     /// Referenz laden, auf `maxSeconds` kürzen und auf `targetRate` bringen.
-    public static func loadReference(url: URL, targetRate: Double, maxSeconds: Double = 15) throws -> [Float] {
+    public static func loadReference(url: URL, targetRate: Double, maxSeconds: Double = 20) throws -> [Float] {
         let (raw, rate) = try readMono(url: url)
         let cut = Array(raw.prefix(Int(maxSeconds * rate)))
         return try Resampler.resample(cut, from: rate, to: targetRate)

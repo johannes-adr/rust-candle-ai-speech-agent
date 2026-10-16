@@ -12,7 +12,8 @@ struct VoiceView: View {
                 voiceCards(draft)
                 if let key = model.sampleMessage { Text(LocalizedStringKey(key)).foregroundStyle(Color.omaSecondaryText) }
 
-                StyleSection(draft: draft)
+                OwnVoiceHonestNote()
+                StyleSection(draft: draft).hiddenForOwnVoice()
 
                 Text("voice.tempo").font(OmaStyle.bodyBold).padding(.top, 4)
                 HStack(spacing: 16) {
@@ -44,6 +45,7 @@ struct VoiceView: View {
             ForEach(voices) { voice in VoiceCard(voice: voice, selected: draft.voiceID == voice.id) }
             OwnVoiceCard()
         }
+        RecordedVoiceRow(draft: draft)
         if voices.contains(where: { !model.hasSample(voiceID: $0.id) }) {
             Text("voice.sampleSoon").foregroundStyle(Color.omaSecondaryText)
         }

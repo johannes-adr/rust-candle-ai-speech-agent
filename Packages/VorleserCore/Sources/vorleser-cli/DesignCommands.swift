@@ -5,7 +5,7 @@ import AudioOut
 import Darwin
 import Foundation
 import Pipeline
-import Speech
+import VorleserSpeech
 import TextPrep
 
 /// Fragt alle 50 ms `phys_footprint` ab und merkt sich die Spitze je Abschnitt.
@@ -153,10 +153,11 @@ struct DesignVoice: AsyncParsableCommand {
         guard let chosen = result.proposals.first(where: { $0.index == keep }) else {
             throw CLIError("Vorschlag \(keep) ist nicht entstanden.")
         }
-        let store = storeDir.map { DesignedVoiceStore(directory: URL(fileURLWithPath: $0, isDirectory: true)) } ?? .standard
-        let voice = try store.save(
-            samples: chosen.samples, sampleRate: chosen.sampleRate, name: name ?? String(wish.prefix(30)),
-            language: reading, description: wish, referenceText: refText, prompt: prompt.text, seed: chosen.seed)
+        let store = RecordedVoiceStore(
+            directory: storeDir.map { URL(fileURLWithPath: $0, isDirectory: true) } ?? RecordedVoiceStore.defaultDirectory)
+        let voice = try store.saveDesigned(
+            samples: chosen.samples, sampleRate: chosen.sampleRate, referenceText: refText,
+            name: name ?? String(wish.prefix(30)), language: reading, wish: wish, prompt: prompt.text, seed: chosen.seed)
         print("Gespeichert: \(voice.id) „\(voice.name)“ in \(store.directory.path)")
 
         guard let readText else { return }

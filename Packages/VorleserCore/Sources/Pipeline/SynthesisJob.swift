@@ -7,7 +7,7 @@ import AudioOut
 import DocumentImport
 import Foundation
 import Projects
-import Speech
+import VorleserSpeech
 import TextPrep
 
 public actor SynthesisJob {

@@ -2,7 +2,7 @@
 //
 // Warum in `Pipeline` und nicht in `Speech`: Der Designer braucht die Prüfung aus `AudioOut`
 // (`ChunkQC`) und die Sprechraten aus `Pipeline`; `Speech` kennt beides nicht und soll nur die
-// Engine und das Speichern von Stimmen enthalten (`DesignedVoiceStore`).
+// Engine und das Speichern von Stimmen enthalten (`RecordedVoiceStore.saveDesigned`).
 //
 // Speicher: VoiceDesign und Base liegen nie zugleich im Speicher. `engine.load(.voiceDesign)`
 // entlädt Base, und nach den Vorschlägen (auch bei Fehler und Abbruch) wird VoiceDesign wieder
@@ -10,7 +10,7 @@
 import AudioOut
 import CryptoKit
 import Foundation
-import Speech
+import VorleserSpeech
 import TextPrep
 
 public enum VoiceGender: String, Sendable, Codable, CaseIterable {

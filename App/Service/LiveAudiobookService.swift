@@ -4,7 +4,7 @@ import AVFoundation
 import Foundation
 import Pipeline
 import Projects
-import Speech
+import VorleserSpeech
 import TextPrep
 
 enum LiveError: Error { case nothingToRead }
@@ -37,9 +37,7 @@ actor LiveAudiobookService: AudiobookService {
 
     private func run(_ request: AudiobookJob, _ out: AsyncStream<AudiobookEvent>.Continuation) async {
         out.yield(.preparing)
-        // Fertige Stimme aus presets.json oder selbst beschriebene (Phase 4) bzw. aufgenommene Stimme.
-        guard let voice = library.store.voice(id: request.voiceID, style: request.style, fallback: true)
-            ?? DesignedVoiceStore.standard.voice(id: request.voiceID) else {
+        guard let voice = library.store.voice(id: request.voiceID, style: request.style, fallback: true) else {
             out.yield(.failed(reasonKey: "problem.noVoice"))
             out.finish()
             return
