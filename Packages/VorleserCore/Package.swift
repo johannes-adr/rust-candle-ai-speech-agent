@@ -12,12 +12,14 @@ let package = Package(
         .library(name: "Speech", targets: ["Speech"]),
         .library(name: "AudioOut", targets: ["AudioOut"]),
         .library(name: "Projects", targets: ["Projects"]),
+        .library(name: "Pipeline", targets: ["Pipeline"]),
         .executable(name: "vorleser-cli", targets: ["vorleser-cli"]),
     ],
     dependencies: [
         // Exakt gepinnt (Tag v0.1.5), siehe docs/spikes/S1-engine.md
         .package(url: "https://github.com/Blaizzy/mlx-audio-swift.git", revision: "dbe5eaac964e8257785f9d015c81f819a38016a8"),
         .package(url: "https://github.com/ml-explore/mlx-swift.git", from: "0.30.6"),
+        .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.5.0"),
     ],
     targets: [
         .target(name: "TextPrep"),
@@ -44,9 +46,17 @@ let package = Package(
         ),
         .target(name: "AudioOut", dependencies: ["CLAME"]),
         .target(name: "Projects", dependencies: ["TextPrep", "AudioOut"]),
+        // Phase 1: Import → Sprache → Abschnitte → Engine → Prüfung → MP3, mit Fortsetzen.
+        .target(
+            name: "Pipeline",
+            dependencies: ["DocumentImport", "TextPrep", "Speech", "AudioOut", "Projects"]
+        ),
         .executableTarget(
             name: "vorleser-cli",
-            dependencies: ["DocumentImport", "TextPrep", "Speech", "AudioOut", "Projects"]
+            dependencies: [
+                "DocumentImport", "TextPrep", "Speech", "AudioOut", "Projects", "Pipeline",
+                .product(name: "ArgumentParser", package: "swift-argument-parser"),
+            ]
         ),
         // Spike S4: liest einen Ordner mit PDFs und schreibt die erkannten Blöcke als .txt.
         .executableTarget(name: "spike-s4", dependencies: ["DocumentImport", "TextPrep"]),
@@ -58,6 +68,7 @@ let package = Package(
         ),
         .testTarget(name: "SpeechTests", dependencies: ["Speech"]),
         .testTarget(name: "AudioOutTests", dependencies: ["AudioOut"]),
+        .testTarget(name: "PipelineTests", dependencies: ["Pipeline", "Speech", "Projects", "TextPrep", "AudioOut"]),
         .testTarget(name: "ProjectsTests", dependencies: ["Projects", "TextPrep", "AudioOut"]),
     ]
 )

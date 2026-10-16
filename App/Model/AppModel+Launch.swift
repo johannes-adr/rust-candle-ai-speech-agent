@@ -22,7 +22,7 @@ extension AppModel {
 
 #if DEBUG
 /// Springt für Screenshots direkt zu einem Bildschirm:
-/// VORLESER_DEMO=start|text|voice|language|working|done|problem, VORLESER_SNAPSHOT=<png>,
+/// VORLESER_DEMO=start|text|voice|language|working|done|problem|convert, VORLESER_SNAPSHOT=<png>,
 /// VORLESER_APPEARANCE=dark|light, VORLESER_PREVIEW_SECONDS=<Sekunden Simulation>.
 @MainActor
 enum DebugLaunch {
@@ -46,6 +46,19 @@ enum DebugLaunch {
             model.startWork()
             await waitUntil { model.screen == .done }
             model.goHome()
+        case "convert":
+            // Ohne Klicken umwandeln (echte Sprachausgabe): VORLESER_TEXT_FILE=<txt> (sonst Beispiel),
+            // VORLESER_RESULT_FILE=<txt> bekommt Pfad, Dauer und Zeiten; danach beendet sich die App.
+            let text = env["VORLESER_TEXT_FILE"].flatMap { try? String(contentsOfFile: $0, encoding: .utf8) } ?? sample(paragraphs: 1)
+            model.typedText = text
+            model.submitTypedText()
+            let began = Date()
+            model.startWork()
+            await waitUntil(seconds: 900) { model.screen == .done || { if case .problem = model.screen { true } else { false } }() }
+            var lines = ["screen=\(model.screen)", "seconds=\(Date().timeIntervalSince(began))",
+                         "instant=\(model.draft?.isShort ?? false)"]
+            if let r = model.result { lines += ["file=\(r.fileURL.path)", "duration=\(r.durationSeconds)", "title=\(r.title)"] }
+            if let out = env["VORLESER_RESULT_FILE"] { try? lines.joined(separator: "\n").write(toFile: out, atomically: true, encoding: .utf8) }
         case "text":
             model.typedText = "Liebe Frau Meier,"
             model.screen = .typeText
@@ -75,8 +88,8 @@ enum DebugLaunch {
         }
     }
 
-    private static func waitUntil(_ condition: @MainActor () -> Bool) async {
-        for _ in 0..<600 {
+    private static func waitUntil(seconds: Int = 60, _ condition: @MainActor () -> Bool) async {
+        for _ in 0..<(seconds * 10) {
             if condition() { return }
             try? await Task.sleep(for: .milliseconds(100))
         }

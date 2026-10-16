@@ -1,5 +1,6 @@
-// Fertige Stimmen aus Resources/Voices/presets.json (vorläufig, siehe Hinweis dort).
+// Fertige Stimmen aus Resources/Voices/presets.json (gelesen vom VoiceStore im Package).
 import Foundation
+import Speech
 import TextPrep
 
 enum VoiceStyle: String, CaseIterable, Sendable, Identifiable {
@@ -31,53 +32,29 @@ struct PresetVoice: Identifiable, Sendable, Equatable {
     }
 }
 
+/// Dünne Hülle um `VoiceStore` (Package `Speech`): dieselbe Quelle für Oberfläche und Engine.
 struct VoiceLibrary: Sendable {
+    let store: VoiceStore
     /// Ordner mit presets.json und den Referenzaufnahmen.
-    let directory: URL
-    private let voices: [Language: [PresetVoice]]
+    var directory: URL { store.directory }
 
     init(directory: URL? = Bundle.main.resourceURL?.appending(path: "Voices", directoryHint: .isDirectory)) {
-        let dir = directory ?? URL(fileURLWithPath: "/nonexistent")
-        self.directory = dir
-        self.voices = Self.load(from: dir.appending(path: "presets.json"))
+        self.store = VoiceStore(directory: directory ?? URL(fileURLWithPath: "/nonexistent"))
     }
 
-    func voices(for language: Language) -> [PresetVoice] { voices[language] ?? [] }
+    func voices(for language: Language) -> [PresetVoice] {
+        store.presets(for: language).map(Self.convert)
+    }
 
-    func voice(id: String) -> PresetVoice? { voices.values.joined().first { $0.id == id } }
+    func voice(id: String) -> PresetVoice? { store.preset(id: id).map(Self.convert) }
 
     /// Pfad der Referenzaufnahme, nur wenn die Datei wirklich da ist.
     func referenceURL(voiceID: String, style: String) -> URL? {
-        guard let name = voice(id: voiceID)?.references[style] else { return nil }
-        let url = directory.appending(path: name)
-        return FileManager.default.fileExists(atPath: url.path) ? url : nil
+        store.referenceURL(voiceID: voiceID, style: style)
     }
 
-    private struct File: Decodable {
-        struct Voice: Decodable {
-            var id: String
-            var name: String
-            var gender: String
-            var description: [String: String]
-            var reference: [String: String]
-        }
-        struct Lang: Decodable { var voices: [Voice] }
-        var languages: [String: Lang]
-    }
-
-    private static func load(from url: URL) -> [Language: [PresetVoice]] {
-        guard let data = try? Data(contentsOf: url), let file = try? JSONDecoder().decode(File.self, from: data)
-        else { return [:] }
-        var out: [Language: [PresetVoice]] = [:]
-        for (code, lang) in file.languages {
-            guard let language = Language(rawValue: code) else { continue }
-            out[language] = lang.voices.map {
-                PresetVoice(
-                    id: $0.id, name: $0.name, isFemale: $0.gender == "f", descriptions: $0.description,
-                    references: $0.reference)
-            }
-        }
-        return out
+    private static func convert(_ p: VoicePreset) -> PresetVoice {
+        PresetVoice(id: p.id, name: p.name, isFemale: p.isFemale, descriptions: p.descriptions, references: p.references)
     }
 }
 

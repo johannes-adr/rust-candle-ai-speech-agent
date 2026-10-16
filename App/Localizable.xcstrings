@@ -580,6 +580,40 @@
         }
       }
     },
+    "notify.done.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ kann jetzt angehört werden."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«%@» já pode ser ouvido."
+          }
+        }
+      }
+    },
+    "notify.done.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ihr Hörbuch ist fertig"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O seu audiolivro está pronto"
+          }
+        }
+      }
+    },
     "player.back30": {
       "extractionState": "manual",
       "localizations": {
@@ -733,6 +767,23 @@
         }
       }
     },
+    "problem.modelMissing": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Sprachausgabe ist noch nicht eingerichtet. Bitte bitten Sie Ihren Helfer um Hilfe."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A leitura em voz alta ainda não está instalada. Peça, por favor, ajuda ao seu ajudante."
+          }
+        }
+      }
+    },
     "problem.noText": {
       "extractionState": "manual",
       "localizations": {
@@ -746,6 +797,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Não foi encontrado texto neste ficheiro."
+          }
+        }
+      }
+    },
+    "problem.noVoice": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für diese Stimme fehlt noch die Aufnahme. Bitte wählen Sie eine andere Stimme."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Falta ainda a gravação desta voz. Escolha, por favor, outra voz."
           }
         }
       }
@@ -1749,6 +1817,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pode usar o computador normalmente enquanto espera."
+          }
+        }
+      }
+    },
+    "working.instant": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sie hören gleich zu: Das Vorlesen beginnt, sobald der erste Teil fertig ist. Gespeichert wird trotzdem."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vai ouvir já a seguir: a leitura começa assim que a primeira parte estiver pronta. Fica tudo guardado na mesma."
           }
         }
       }

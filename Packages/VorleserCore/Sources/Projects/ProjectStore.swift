@@ -167,11 +167,11 @@ public actor ProjectStore {
     @discardableResult
     public func markChunkDone(
         id: UUID, chunkIndex: Int, duration: Double, computeSeconds: Double? = nil,
-        qc: ChunkQCReport? = nil, seed: UInt64? = nil
+        qc: ChunkQCReport? = nil, seed: UInt64? = nil, attemptsUsed: Int = 1
     ) throws -> Project {
         try mutate(id, chunkIndex) { c in
             c.status = .done
-            c.attempts += 1
+            c.attempts += attemptsUsed
             c.duration = duration
             c.computeSeconds = computeSeconds
             c.qc = qc
@@ -184,11 +184,11 @@ public actor ProjectStore {
     @discardableResult
     public func markChunkSuspicious(
         id: UUID, chunkIndex: Int, duration: Double?, computeSeconds: Double? = nil,
-        qc: ChunkQCReport? = nil, seed: UInt64? = nil
+        qc: ChunkQCReport? = nil, seed: UInt64? = nil, attemptsUsed: Int = 1
     ) throws -> Project {
         try mutate(id, chunkIndex) { c in
             c.status = .suspicious
-            c.attempts += 1
+            c.attempts += attemptsUsed
             c.duration = duration
             c.computeSeconds = computeSeconds
             c.qc = qc
@@ -197,10 +197,12 @@ public actor ProjectStore {
     }
 
     @discardableResult
-    public func markChunkFailed(id: UUID, chunkIndex: Int, error: String, seed: UInt64? = nil) throws -> Project {
+    public func markChunkFailed(
+        id: UUID, chunkIndex: Int, error: String, seed: UInt64? = nil, attemptsUsed: Int = 1
+    ) throws -> Project {
         try mutate(id, chunkIndex) { c in
             c.status = .failed
-            c.attempts += 1
+            c.attempts += attemptsUsed
             c.lastError = error
             if let seed { c.seed = seed }
         }

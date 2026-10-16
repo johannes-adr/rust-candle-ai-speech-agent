@@ -9,6 +9,9 @@ struct WorkingView: View {
             OmaProgressBar(fraction: model.progress.fraction)
             Text(positionText).font(OmaStyle.bodyBold)
             Text(remainingText)
+            if model.instantPlayback {
+                Label("working.instant", systemImage: "speaker.wave.2.fill").font(OmaStyle.bodyBold)
+            }
             Label("working.hint", systemImage: "info.circle")
                 .padding(.top, 8)
                 .foregroundStyle(Color.omaSecondaryText)
