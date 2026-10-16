@@ -3,8 +3,14 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(AppModel.self) private var model
+    private let setup = SetupState.shared
 
     var body: some View {
+        // Einrichtung (App/Setup): der Assistent für den Helfer ersetzt das ganze Fenster.
+        if setup.showAssistant { SetupAssistantView() } else { content }
+    }
+
+    private var content: some View {
         ZStack {
             Color.omaBackground.ignoresSafeArea()
             VStack(spacing: 0) {
@@ -21,6 +27,10 @@ struct RootView: View {
     }
 
     @ViewBuilder private var screen: some View {
+        if setup.needsSetup { NotSetUpView() } else { mainScreen }
+    }
+
+    @ViewBuilder private var mainScreen: some View {
         switch model.screen {
         case .start: StartView()
         case .typeText: TypeTextView()

@@ -1,6 +1,7 @@
 import Foundation
 @preconcurrency import MLX
 import MLXAudioTTS
+import ModelSetup
 import TextPrep
 
 /// Qwen3-TTS über `mlx-audio-swift` (MLX, Metal-GPU).
@@ -28,17 +29,24 @@ public actor MLXQwenEngine: SpeechEngine {
         self.locator = locator
     }
 
-    /// Bequem: gepinntes Modell aus dem Hugging-Face-Cache.
-    public init(bits: ModelBits, cacheRoot: URL = ModelSpec.defaultCacheRoot) {
+    /// Bequem: gepinntes Modell. Vorrang hat der `ModelStore` (Application Support, vom
+    /// Einrichtungsassistenten geprüft). Nur für Entwickler: ist dort nichts bereit und
+    /// `fallbackToHuggingFaceCache` an, wird der Snapshot im Hugging-Face-Cache benutzt.
+    /// Die App schaltet den Fallback aus, damit „nicht eingerichtet“ nie von einem Cache überdeckt wird.
+    public init(bits: ModelBits, store: ModelStore = .standard,
+                cacheRoot: URL = ModelRef.defaultHuggingFaceCacheRoot,
+                fallbackToHuggingFaceCache: Bool = true) {
         self.init(locator: { kind in
             guard let spec = ModelSpec.pinned(kind, bits: bits) else {
                 throw SpeechEngineError.modelMissing("\(kind) \(bits.rawValue)-bit ist nicht festgelegt")
             }
-            let dir = spec.huggingFaceSnapshotDirectory(cacheRoot: cacheRoot)
-            guard FileManager.default.fileExists(atPath: dir.appendingPathComponent("config.json").path) else {
-                throw SpeechEngineError.modelMissing(dir.path)
+            if let dir = store.locate(spec) { return dir }
+            let cached = spec.huggingFaceSnapshotDirectory(cacheRoot: cacheRoot)
+            if fallbackToHuggingFaceCache,
+               FileManager.default.fileExists(atPath: cached.appendingPathComponent("config.json").path) {
+                return cached
             }
-            return dir
+            throw SpeechEngineError.modelMissing(store.directory(for: spec).path)
         })
     }
 
