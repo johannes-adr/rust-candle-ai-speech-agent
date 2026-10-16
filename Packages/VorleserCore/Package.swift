@@ -19,7 +19,17 @@ let package = Package(
         .target(name: "TextPrep"),
         .target(name: "DocumentImport", dependencies: ["TextPrep"]),
         .target(name: "Speech", dependencies: ["TextPrep"]),
-        .target(name: "AudioOut"),
+        // LAME 3.100 (LGPL) als eigenes C-Target, nur Encoder. Siehe docs/spikes/S5-mp3.md.
+        .target(
+            name: "CLAME",
+            exclude: ["COPYING", "LICENSE", "README.lame"],
+            publicHeadersPath: "include",
+            cSettings: [
+                .define("HAVE_CONFIG_H"),
+                .headerSearchPath("."),
+            ]
+        ),
+        .target(name: "AudioOut", dependencies: ["CLAME"]),
         .target(name: "Projects", dependencies: ["TextPrep"]),
         .executableTarget(
             name: "vorleser-cli",
