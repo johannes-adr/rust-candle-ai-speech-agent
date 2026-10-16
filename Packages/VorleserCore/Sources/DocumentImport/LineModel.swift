@@ -16,6 +16,9 @@ public struct PageLine: Sendable, Equatable {
     public var row: Int
     /// Anzahl der Stücke dieser Zeile (≥ 3 deutet auf eine Tabellenzeile).
     public var cells: Int
+    /// Absatz-Kennung der Texterkennung (`RecognizeDocumentsRequest`), -1 = unbekannt.
+    /// Zeilen mit gleicher Kennung gehören zu einem Absatz.
+    public var paragraph: Int = -1
 
     public init(_ text: String, rect: CGRect, fontSize: CGFloat = 11, isBold: Bool = false, page: Int = 0, row: Int = -1, cells: Int = 1) {
         self.row = row

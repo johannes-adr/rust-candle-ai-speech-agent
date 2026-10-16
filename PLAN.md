@@ -110,7 +110,7 @@ Vorgehen bei der Engine:
 
 | Aufgabe | macOS-API |
 | --- | --- |
-| PDF-Text mit Zeilenpositionen | PDFKit (`PDFSelection.selectionsByLine()`, Bounds) |
+| PDF-Text mit Zeilenpositionen | PDFKit (`PDFSelection.selectionsByLine()`, Bounds). Achtung (Spike S4): PDFKit-Zeilen laufen über Spalten und Tabellenzellen; deshalb jede Zeile an Wortlücken in Stücke teilen (Wörter über `selection(for: NSRange).bounds` messen; `characterBounds(at:)` ist unbrauchbar) |
 | Scans / Fotos | Vision `RecognizeDocumentsRequest` (Absätze); Fallback `VNRecognizeTextRequest` |
 | Word / RTF / ODT / HTML | `NSAttributedString(url:)` liest .docx, .odt und .rtf direkt |
 | Sätze trennen, Sprache erkennen | NaturalLanguage (`NLTokenizer`, `NLLanguageRecognizer`), alle 10 Sprachen inkl. CJK |
@@ -264,13 +264,16 @@ Project { id, title, sourceHash, language, voiceID, style, tempo, chunks }   // 
 2. **Sprache erkennen**: `NLLanguageRecognizer` über das ganze Dokument,
    eingeschränkt auf die 10 Sprachen. Ist sie unsicher, fragt Schritt 2 nach.
 3. **Bereinigen** (nur PDF)
-   - Kopf- und Fußzeilen: wiederkehrende Zeilen am Seitenrand (≥ 50 % der
-     Seiten, Ziffern ignoriert) raus, ebenso einzelne Seitenzahlen.
+   - Kopf- und Fußzeilen: wiederkehrende Zeilen am Seitenrand (≥ 40 % der
+     Seiten, mind. 2, Ziffern ignoriert; 40 statt 50 %, weil Bücher wechselnde
+     Kolumnentitel links/rechts haben, Spike S4) raus, ebenso einzelne Seitenzahlen.
    - Silbentrennung zusammenziehen, wenn `NSSpellChecker` das Wort kennt.
    - Zeilen zu Absätzen zusammenfügen.
    - Überschriften werden Kapitelmarken mit längerer Pause.
    - Fußnotenziffern, Tabellen und Bildunterschriften überspringen.
-   - Zwei Spalten über die x-Position der Zeilen erkennen.
+   - Zwei Spalten erkennen: Zeilen zuerst an großen Wortlücken in Stücke
+     teilen, dann freie senkrechte Gasse über ein Überdeckungs-Histogramm der
+     x-Positionen suchen (Spike S4).
 4. **Normalisieren**: ein `Normalizer` je Sprache, gebaut nur für das, was
    Spike S2 als Problem zeigt.
    - Für alle Sprachen: Zahlen per `NumberFormatter(.spellOut)` mit Locale,
