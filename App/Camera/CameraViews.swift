@@ -11,7 +11,6 @@ struct CameraView: View {
             content
             if flow.confirmDiscard { DiscardOverlay(flow: flow) }
         }
-        .task { flow.start() }
     }
 
     @ViewBuilder private var content: some View {
@@ -106,7 +105,7 @@ struct CameraShootView: View {
                     Image(systemName: "camera.viewfinder").font(.system(size: 80)).foregroundStyle(.white.opacity(0.6))
                 }
             }
-            .frame(height: 380)
+            .frame(height: 320)
             .clipShape(RoundedRectangle(cornerRadius: OmaStyle.cornerRadius))
             .overlay(RoundedRectangle(cornerRadius: OmaStyle.cornerRadius).stroke(Color.omaBorder, lineWidth: 2))
             Text("camera.shoot.hint").foregroundStyle(Color.omaSecondaryText)

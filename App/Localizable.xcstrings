@@ -2314,6 +2314,40 @@
         }
       }
     },
+    "helper.quality.needsSetup": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„Etwas genauer“ muss einmal eingerichtet werden (zusätzlicher Download, einmalig mit Internet)."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Um pouco mais preciso” tem de ser configurado uma vez (transferência adicional, uma só vez com internet)."
+          }
+        }
+      }
+    },
+    "helper.quality.openSetup": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einrichtung öffnen"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir a configuração"
+          }
+        }
+      }
+    },
     "helper.tab.books": {
       "extractionState": "manual",
       "localizations": {

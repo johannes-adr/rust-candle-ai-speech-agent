@@ -25,11 +25,17 @@ enum HelperDemos {
                 model.settings.helperName = "Johannes"
                 model.settings.helperPhone = "0151 234 5678"
             }
-            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+            // Eigenes Fenster mit demselben Inhalt wie das Einstellungsfenster (das echte lässt sich nicht
+            // zuverlässig per Code öffnen).
+            let window = NSWindow(
+                contentRect: NSRect(x: 100, y: 100, width: 740, height: 640), styleMask: [.titled, .closable],
+                backing: .buffered, defer: false)
+            window.contentViewController = NSHostingController(rootView: SettingsView().environment(model))
+            window.title = "Einstellungen"
+            window.makeKeyAndOrderFront(nil)
             try? await Task.sleep(for: .seconds(2))
-            // Taste für „Protokoll kopieren“ o. Ä. nicht nötig; nur das Fenster fotografieren.
             if let path = env["VORLESER_SNAPSHOT"] {
-                snapshotSettings(to: URL(fileURLWithPath: path))
+                snapshot(window, to: URL(fileURLWithPath: path))
                 NSApp.terminate(nil)
             }
             return true
@@ -134,11 +140,6 @@ enum HelperDemos {
 
     private static func snapshotMain(to url: URL) {
         guard let window = NSApp.windows.first(where: { $0.isVisible && $0.frame.width > 900 }) else { return }
-        snapshot(window, to: url)
-    }
-
-    private static func snapshotSettings(to url: URL) {
-        guard let window = NSApp.windows.first(where: { $0.isVisible && $0.frame.width < 900 && $0.frame.width > 600 }) else { return }
         snapshot(window, to: url)
     }
 

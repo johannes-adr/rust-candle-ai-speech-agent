@@ -8,6 +8,17 @@ import TextPrep
 import Vision
 
 /// Drehung eines Fotos: wie oft es im Uhrzeigersinn um 90° gedreht werden muss, damit der Text aufrecht steht.
+/// Führt synchrone Vision-Aufrufe auf einer eigenen seriellen Warteschlange aus. Sie blockieren sonst Threads
+/// des Swift-Concurrency-Pools; laufen mehrere gleichzeitig (parallele Tests, mehrere Seiten), wartet Vision auf
+/// einen Thread, den es selbst belegt, und alles steht (gemessen: Stillstand bei parallelen Tests).
+enum VisionQueue {
+    private static let queue = DispatchQueue(label: "de.vorleser.vision", qos: .userInitiated)
+
+    static func run<T: Sendable>(_ work: @escaping @Sendable () -> T) async -> T {
+        await withCheckedContinuation { c in queue.async { c.resume(returning: work()) } }
+    }
+}
+
 enum PhotoOrientation {
     /// Lange Seite der Bilder, auf der die Drehung geprüft wird (schnell genug für vier Läufe).
     static let probeLongSide: CGFloat = 1400
@@ -16,11 +27,11 @@ enum PhotoOrientation {
     /// Mindestwert (Summe Sicherheit × Buchstaben), damit überhaupt von „Text gefunden“ die Rede ist.
     static let minScore = 25.0
 
-    static func uprightTurns(for image: CGImage) -> Int {
+    static func uprightTurns(for image: CGImage) async -> Int {
         var scores: [Double] = []
         for k in 0..<4 {
             guard let probe = rotate(image, clockwiseQuarterTurns: k, longSide: probeLongSide) else { scores.append(0); continue }
-            scores.append(score(probe))
+            scores.append(await score(probe))
             // Schon die Ausgangslage klar gut: keine Zeit für die anderen drei verschwenden.
             if k == 0, scores[0] >= 400 { return 0 }
         }
@@ -29,7 +40,12 @@ enum PhotoOrientation {
     }
 
     /// Wie viel lesbarer Text steht im Bild? Summe aus Sicherheit × Buchstaben je Zeile (schneller Durchgang).
-    static func score(_ image: CGImage) -> Double {
+    static func score(_ image: CGImage) async -> Double {
+        nonisolated(unsafe) let image = image
+        return await VisionQueue.run { scoreSync(image) }
+    }
+
+    private static func scoreSync(_ image: CGImage) -> Double {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .fast
         request.usesLanguageCorrection = false
@@ -90,7 +106,7 @@ extension DocumentImporter {
             try Task.checkCancellation()
             progress?(i + 1, urls.count)
             guard let loaded = OCR.loadImage(at: url) else { unreadable.append(i); continue }
-            let turns = PhotoOrientation.uprightTurns(for: loaded)
+            let turns = await PhotoOrientation.uprightTurns(for: loaded)
             guard let image = PhotoOrientation.rotate(loaded, clockwiseQuarterTurns: turns) else { unreadable.append(i); continue }
             if turns != 0 { turnsByPage[i] = turns }
             let size = CGSize(width: image.width, height: image.height)

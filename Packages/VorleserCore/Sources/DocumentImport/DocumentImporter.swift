@@ -23,6 +23,14 @@ public struct ImportResult: Sendable {
     public var rotatedPages: [Int: Int] = [:]
     /// Nur Fotos: Seiten (0-basiert), aus denen kein Text gelesen werden konnte.
     public var unreadablePages: [Int] = []
+
+    public init(document: TextDocument, report: CleaningReport?, pageCount: Int, ocrPages: [Int], language: String?) {
+        self.document = document
+        self.report = report
+        self.pageCount = pageCount
+        self.ocrPages = ocrPages
+        self.language = language
+    }
 }
 
 /// Liest PDF, Word/ODT/RTF/HTML, Text und Bilder in ein `TextDocument`.

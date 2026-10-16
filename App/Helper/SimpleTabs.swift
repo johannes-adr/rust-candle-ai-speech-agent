@@ -1,6 +1,8 @@
 // Reiter „Helfer“, „Ablage“ und „Qualität“ des Helfer-Fensters.
 import AppKit
+import ModelSetup
 import SwiftUI
+import VorleserSpeech
 
 // MARK: Helfer
 
@@ -130,6 +132,13 @@ struct FolderTab: View {
 struct QualityTab: View {
     @Environment(AppModel.self) private var model
 
+    /// 8-bit gewählt, aber noch nicht eingerichtet (Hauptmodell fehlt im Modellspeicher).
+    private var needsSetupFor8Bit: Bool {
+        let service = SetupState.shared.service
+        guard let manifest = service.manifests(bits: .eight, includeVoiceDesign: false)?.first else { return true }
+        return !service.status(of: manifest).isReady
+    }
+
     var body: some View {
         @Bindable var settings = model.settings
         Form {
@@ -143,6 +152,10 @@ struct QualityTab: View {
                 .labelsHidden()
                 Text("helper.quality.info").foregroundStyle(.secondary)
                 Text("helper.quality.applies").foregroundStyle(.secondary)
+                if settings.quality == .accurate, needsSetupFor8Bit {
+                    Label("helper.quality.needsSetup", systemImage: "arrow.down.circle")
+                    Button("helper.quality.openSetup") { SetupState.shared.reopenAssistant() }
+                }
             }
             Section("helper.tempo.header") {
                 Picker("helper.tempo.header", selection: $settings.defaultTempo) {
@@ -152,7 +165,9 @@ struct QualityTab: View {
                 .labelsHidden()
                 Text("helper.tempo.info").foregroundStyle(.secondary)
             }
+            SetupSettingsSection()
         }
         .formStyle(.grouped)
+        .onChange(of: model.settings.quality) { _, _ in SetupState.shared.refresh() }
     }
 }

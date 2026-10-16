@@ -2,7 +2,7 @@
 // gespeichert. UserDefaults-Schlüssel (für andere Teile der App, z. B. den Modellspeicher):
 //   helperName, helperPhone      Text
 //   outputDirectory              Pfad, fehlt = Musik › Vorgelesen
-//   modelQuality                 "fast" (4-bit, Standard) oder "accurate" (8-bit); lesen: AppSettings.quality
+//   modelBits                    Int 4 (Standard, „Schneller“) oder 8 („Etwas genauer“); liest auch SetupState
 //   defaultTempo                 "slower" | "normal" | "faster" (Tempo-Standard für neue Hörbücher)
 //   chaptersAsFiles              Bool, Standard true: Kapitel zusätzlich als einzelne Dateien
 import Foundation
@@ -23,11 +23,12 @@ final class AppSettings {
 
     /// Schneller (4-bit, empfohlen) oder etwas genauer (8-bit). Die Wahl wirkt beim nächsten Laden der Sprachausgabe;
     /// der Modellspeicher bzw. die Engine liest `quality.bits`.
-    var quality: ModelQuality { didSet { defaults.set(quality.rawValue, forKey: Self.qualityKey) } }
+    var quality: ModelQuality { didSet { defaults.set(quality.bits, forKey: Self.qualityKey) } }
     var defaultTempo: Tempo { didSet { defaults.set(defaultTempo.rawValue, forKey: Self.tempoKey) } }
     var chaptersAsFiles: Bool { didSet { defaults.set(chaptersAsFiles, forKey: Self.chaptersKey) } }
 
-    static let qualityKey = "modelQuality"
+    /// Gemeinsam mit dem Einrichtungsassistenten (`SetupState.bitsDefaultsKey`): Int 4 oder 8, Standard 4.
+    static let qualityKey = "modelBits"
     static let tempoKey = "defaultTempo"
     static let chaptersKey = "chaptersAsFiles"
 
@@ -35,7 +36,7 @@ final class AppSettings {
         self.defaults = defaults
         helperName = defaults.string(forKey: "helperName") ?? ""
         helperPhone = defaults.string(forKey: "helperPhone") ?? ""
-        quality = defaults.string(forKey: Self.qualityKey).flatMap(ModelQuality.init(rawValue:)) ?? .fast
+        quality = defaults.integer(forKey: Self.qualityKey) == 8 ? .accurate : .fast
         defaultTempo = defaults.string(forKey: Self.tempoKey).flatMap(Tempo.init(rawValue:)) ?? .normal
         chaptersAsFiles = defaults.object(forKey: Self.chaptersKey) as? Bool ?? true
         outputDirectory = defaults.string(forKey: "outputDirectory").map { URL(fileURLWithPath: $0, isDirectory: true) }

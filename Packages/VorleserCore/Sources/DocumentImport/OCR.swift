@@ -63,7 +63,7 @@ enum OCR {
         if engine == .documents, let raws = try? await recognizeDocumentRaws(image: image, pageSize: pageSize, language: language), !raws.isEmpty {
             return finish(dropEdgeLines(raws, pageSize: pageSize, margin: edgeMargin), pageSize: pageSize, pageIndex: pageIndex)
         }
-        let raws = try recognizeTextRaws(image: image, pageSize: pageSize, language: language)
+        let raws = try await recognizeTextRawsOffPool(image: image, pageSize: pageSize, language: language)
         return finish(dropEdgeLines(raws, pageSize: pageSize, margin: edgeMargin), pageSize: pageSize, pageIndex: pageIndex)
     }
 
@@ -115,6 +115,15 @@ enum OCR {
     static func documentLanguages(for code: String?, supported: [Locale.Language]) -> [Locale.Language] {
         guard let code else { return [] }
         return supported.filter { ($0.languageCode?.identifier ?? "") == (code == "zh" ? "zh" : code) }
+    }
+
+    /// `recognizeTextRaws` auf der Vision-Warteschlange (siehe `VisionQueue`).
+    static func recognizeTextRawsOffPool(image: CGImage, pageSize: CGSize, language: String?) async throws -> [Raw] {
+        nonisolated(unsafe) let image = image
+        let result: Result<[Raw], Error> = await VisionQueue.run {
+            Result { try recognizeTextRaws(image: image, pageSize: pageSize, language: language) }
+        }
+        return try result.get()
     }
 
     static func recognizeTextRaws(image: CGImage, pageSize: CGSize, language: String?) throws -> [Raw] {

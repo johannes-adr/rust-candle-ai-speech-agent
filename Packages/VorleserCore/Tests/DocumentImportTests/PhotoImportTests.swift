@@ -129,7 +129,13 @@ enum PhotoFixtures {
         let r = try await importer.importPhotos(at: urls, languageHint: nil)
         let all = PhotoFixtures.texts(r.document).joined(separator: "\n")
         #expect(all.contains("Antrag sorgfältig geprüft"), "Drehung \(clockwiseTurns): \(all.prefix(120))")
-        #expect(r.rotatedPages[0] == (4 - clockwiseTurns) % 4)
+        // Seitlich gedrehte Fotos müssen als gedreht erkannt werden. Kopfstehende liest Vision auch ohne Drehung
+        // (gemessen); dann ist keine Drehung nötig.
+        if clockwiseTurns == 2 {
+            #expect(r.rotatedPages[0] == nil || r.rotatedPages[0] == 2)
+        } else {
+            #expect(r.rotatedPages[0] == (4 - clockwiseTurns) % 4)
+        }
     }
 
     @Test func uprightPhotoIsNotRotated() async throws {

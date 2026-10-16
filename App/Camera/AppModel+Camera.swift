@@ -27,6 +27,7 @@ extension AppModel {
         AppLog.info("camera", "Kamera-Ablauf gestartet")
         camera = flow
         screen = .camera
+        flow.start()
     }
 
     /// Fotos sind gelesen: weiter zu Schritt 2. Quelle ist die Summe der Bilder (für „schon angefangen“).
@@ -58,7 +59,7 @@ struct CameraCard: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 24) {
-                Image(systemName: "iphone.gen3.badge.camera")
+                Image(systemName: "camera.viewfinder")
                     .font(.system(size: 56)).foregroundStyle(Color.omaBorder).frame(width: 90)
                 VStack(alignment: .leading, spacing: 6) {
                     Text("camera.card.title").font(.system(size: 30, weight: .bold))
