@@ -3,9 +3,8 @@
 Stand: 16.10.2026 · Zielgerät: Mac mit M4, macOS 26 (Budget 16 GB RAM; das Gerät hat 24 GB) · Xcode 27 / Swift 6.4 · Status: **Spikes laufen**
 
 Ziel: Eine Mac-App, mit der eine Oma ohne Hilfe einen Brief, ein PDF oder einen
-Text in eine MP3 verwandelt. Vorgelesen wird von einer fertigen Stimme, einer
-beschriebenen Stimme („ruhig, warm, wie ein Märchen“) oder der eigenen,
-geklonten Stimme. Das geht in allen 10 Sprachen von Qwen3-TTS, lokal und offline.
+Text in eine MP3 verwandelt. Vorgelesen wird mit einer eigenen Stimme: aufgenommen, importiert oder
+beschrieben („ruhig, warm, wie ein Märchen“). Fertige Stimmen gibt es nicht. Das geht in allen 10 Sprachen von Qwen3-TTS, lokal und offline.
 
 Umgesetzt wird auf dem Mac mit Claude Code. Arbeitsregeln dafür stehen in
 [CLAUDE.md](CLAUDE.md).
@@ -22,7 +21,7 @@ Umgesetzt wird auf dem Mac mit Claude Code. Arbeitsregeln dafür stehen in
 | Stil-Anweisungen | **Design → Klon**: Die Beschreibung erzeugt einmal eine Referenzaufnahme, das Dokument wird dann mit Base geklont | Offizieller Qwen-Workflow für konsistente Stimmen; Base ignoriert `instruct` |
 | Sprachen (Vorlesen) | **Alle 10**: Deutsch, Portugiesisch, Englisch, Spanisch, Französisch, Italienisch, Russisch, Chinesisch, Japanisch, Koreanisch; automatisch erkannt | Qwen3-TTS kann genau diese 10 |
 | Sprachen (Oberfläche) | **Deutsch + Portugiesisch** über String Catalog, folgt der Systemsprache | weitere Sprachen später ohne Code-Änderung |
-| Fertige Stimmen | pro Sprache 2 Stimmen (Frau/Mann) × 4 Stile, **einmalig auf dem Mac erzeugt** und als Referenz (ALAC + Text) gespeichert | Im Normalfall wird VoiceDesign nie geladen → weniger RAM |
+| Stimmen | **nur eigene**: aufgenommen, importiert oder beschrieben (Design → Klon). Jede Stimme ist mit dem Text gekoppelt, mit dem sie aufgenommen wurde (ALAC + `.txt`) | Entscheidung des Nutzers: keine vordefinierten Stimmen. VoiceDesign wird nur beim Beschreiben geladen |
 | Textaufbereitung | PDFKit + Vision-OCR + Bereinigung + Normalisierung je Sprache (Zahlen, Datum, Abkürzungen) | systemeigen, kein Zusatzmodell |
 | Langtext | Abschnitte von **200–500 Zeichen** (CJK ca. ⅓), seriell, mit Prüfung und Wiederholung | Qwen3-TTS wird ab ca. 500 Wörtern pro Durchgang unzuverlässig (§2.3) |
 | Ausgabe | **MP3**, CBR 64 kbit/s, mono, 44,1 kHz, ID3v2-Tags; lange Bücher zusätzlich als **eine MP3 pro Kapitel** | 44,1 kHz/CBR spielen auch alte CD-Player und Autoradios; ca. 29 MB pro Stunde |
@@ -54,9 +53,8 @@ Wichtig für uns:
   stark. Der Weg zur richtigen Variante ist die Stimmbeschreibung
   („Muttersprachlerin aus Lissabon“ vs. „aus São Paulo“), das prüft Spike S3.
 - **Sprachübergreifendes Klonen** geht (z. B. deutsche Referenz, portugiesischer
-  Text). Dabei klingt eventuell Akzent mit. Deshalb hat jede Sprache eigene
-  fertige Stimmen, und die eigene Stimme wird möglichst in der Lesesprache
-  aufgenommen.
+  Text). Dabei klingt eventuell Akzent mit. Deshalb wird die eigene Stimme
+  möglichst in der Lesesprache aufgenommen oder beschrieben.
 - **Klonen**: Mit Transkript (ICL-Modus) wird es am ähnlichsten, ohne Transkript
   per `x_vector_only_mode` schwächer. Empfohlen werden 10–15 s Referenz; länger
   macht es nur langsamer (Messung im alten Projekt).
@@ -159,14 +157,14 @@ Vorgehen bei der Engine:
 ┌────────────────────────────────────────┐     ┌────────────────────────────────────────┐
 │ Vorleser                     [ Hilfe ] │     │ Schritt 2 von 3: Wer soll vorlesen?    │
 │                                        │     │ Sprache: Deutsch ✓          [ändern]   │
-│ Was möchten Sie vorlesen lassen?       │     │ ┌────────┐ ┌────────┐ ┌──────────────┐ │
-│ ┌──────────────────┐ ┌───────────────┐ │     │ │ Helga  │ │ Karl   │ │ Meine eigene │ │
-│ │ [Datei]          │ │ [Stift]       │ │     │ │ warm   │ │ tief   │ │ Stimme       │ │
-│ │ Datei auswählen  │ │ Text eintippen│ │     │ │[>Probe]│ │[>Probe]│ │ [o Aufnehmen]│ │
-│ │ PDF, Word, Text  │ │ oder einfügen │ │     │ └────────┘ └────────┘ └──────────────┘ │
-│ └──────────────────┘ └───────────────┘ │     │ Wie soll es klingen?                   │
-│   … oder Datei einfach hierher ziehen  │     │ [Ruhig] [Fröhlich] [Wie ein Märchen]   │
-│                                        │     │ [Sachlich] [Eigener Wunsch …]          │
+│ Was möchten Sie vorlesen lassen?       │     │ ┌──────────────┐ ┌────────────────┐ │
+│ ┌──────────────────┐ ┌───────────────┐ │     │ │ Meine eigene │ │ Stimme         │ │
+│ │ [Datei]          │ │ [Stift]       │ │     │ │ Stimme       │ │ beschreiben    │ │
+│ │ Datei auswählen  │ │ Text eintippen│ │     │ │ [o Aufnehmen]│ │ [Beschreiben]  │ │
+│ │ PDF, Word, Text  │ │ oder einfügen │ │     │ └──────────────┘ └────────────────┘ │
+│ └──────────────────┘ └───────────────┘ │     │ (gespeicherte Stimmen als Karten)      │
+│   … oder Datei einfach hierher ziehen  │     │                                        │
+│                                        │     │                                        │
 │ Meine Hörbücher                        │     │ Tempo: [Langsamer] [Normal] [Schneller]│
 │ > Brief Krankenkasse   3 Min  gestern  │     │                                        │
 │ > Rotkäppchen         12 Min  Montag   │     │ [ Zurück ]        [ Vorlesen lassen > ]│
@@ -195,8 +193,10 @@ Vorgehen bei der Engine:
 
   Das Transkript ist der feste Lesetext, die Oma muss nichts abtippen. Die
   Spracherkennung prüft nur, ob er vorgelesen wurde.
-- **Stil bei eigener Stimme**: Dort steht ehrlich „Ihre Stimme klingt so, wie
-  Sie sie aufgenommen haben“. Tempo und Pausen gehen trotzdem.
+- **Stil**: Es gibt keine Stil-Knöpfe. Der Stil steckt in der Aufnahme bzw. in der
+  Beschreibung. Tempo und Pausen gehen trotzdem.
+- **Noch keine Stimme**: Schritt ② zeigt eine freundliche Karte („Noch keine Stimme“) und
+  die Karten zum Aufnehmen und Beschreiben; „Vorlesen lassen“ ist gesperrt und sagt warum.
 - **Fertig**: Ton plus Mitteilung. „Verschicken“ öffnet das Teilen-Menü (Mail,
   Nachrichten, AirDrop). Bei Büchern mit Kapiteln landet zusätzlich ein Ordner
   mit `01 Kapitel 1.mp3`, `02 …` daneben, passend für USB-Stick und CD.
@@ -226,7 +226,6 @@ Vorgehen bei der Engine:
 project.yml                      XcodeGen → Vorleser.xcodeproj (nicht eingecheckt)
 App/                             SwiftUI-Views, ViewModels, Assets, Info.plist,
                                  Localizable.xcstrings (de, pt)
-Resources/Voices/                presets.json (Beschreibungen je Sprache) + erzeugte Referenzen
 Resources/ReadAloud/             feste Lesetexte für die eigene Aufnahme, je Sprache
 Packages/VorleserCore/           SwiftPM, ohne UI, testbar per `swift test`
 ├── Sources/DocumentImport/      PDFKit, NSAttributedString, Vision-OCR
@@ -256,7 +255,7 @@ protocol SpeechEngine: Actor {
 enum Language: String, CaseIterable { case de, pt, en, es, fr, it, ru, zh, ja, ko }
 
 // Pseudocode, Felder statt fertiger Typen:
-Voice   { id, name, language, kind: preset|designed|recorded, referenceAudio, referenceText, description? }
+Voice   { id, name, language, kind: designed|recorded, referenceAudio, referenceText, description? }
 Chunk   { index, text, spokenText, kind: sentence|paragraphEnd|heading, chapter, seed, status, duration, qc }
 Project { id, title, sourceHash, language, voiceID, style, tempo, chunks }   // manifest.json
 ```
@@ -300,7 +299,7 @@ Project { id, title, sourceHash, language, voiceID, style, tempo, chunks }   // 
 ### 4.4 Sprachsynthese (ressourcenschonend)
 
 - **Nur ein Modell im Speicher.** Das Dokument läuft über Base. VoiceDesign wird
-  nur für „Eigener Wunsch …“ und das Erzeugen der fertigen Stimmen geladen.
+  nur für „Stimme beschreiben“ geladen.
   Nach 60 s Leerlauf entlädt die App alles und braucht dann < 150 MB.
 - **Klon-Prompt einmal pro Dokument** berechnen, nicht pro Abschnitt.
 - **Streaming auch beim Export**: Audio geht stückweise auf die Platte. Vocello
@@ -349,7 +348,7 @@ Project { id, title, sourceHash, language, voiceID, style, tempo, chunks }   // 
 
 Auf der Platte:
 - Modelle ca. 4–6 GB (Base + VoiceDesign).
-- Fertige Stimmen: 10 Sprachen × 2 × 4 = 80 Referenzen à ~12 s, als ALAC ca. 25 MB.
+- Eigene Stimmen: je Referenz ~12 s, als ALAC ca. 0,3 MB.
 - MP3 ca. 29 MB pro Stunde.
 
 Grobe Erwartung: Bei einer RTF von 0,3–0,5 auf dem M4 ist ein 30-seitiges PDF
@@ -390,24 +389,21 @@ nicht hören.
 | --- | --- | --- |
 | **S1 Engine** | RTF, Spitzenspeicher und Klon-Overhead pro Aufruf auf dem M4: `mlx-audio-swift` vs. `VocelloQwen3Core` (Python-`mlx-audio` als Referenz). 🎧 4-bit vs. 8-bit im Blindtest (de, pt). | Engine und Bit-Tiefe gewählt. Ziel: RTF ≤ 0,5, Spitze ≤ 4 GB |
 | **S2 Sprachen** | Je Sprache ein Testsatz-Set (Zahlen, Datum, Geld, Abkürzungen, Fremdwörter). Mit Spracherkennung zurück in Text, dann vergleichen: was liest das Modell selbst richtig? Fehlerrate bei 250/500/900 Zeichen. Hilft eine niedrigere Temperatur? | Normalisierungsregeln je Sprache, Abschnittsgröße, Sampling |
-| **S3 Stimme** | Bleibt eine Design-Referenz über 30 geklonte Abschnitte stabil? Beschreibungen in der Lesesprache oder auf Englisch? 🎧 pt-PT vs. pt-BR per Beschreibung erreichbar? Welche Stil-Knöpfe kommen an? | Workflow bestätigt, `presets.json` festgelegt |
+| **S3 Stimme** | Bleibt eine Design-Referenz über 30 geklonte Abschnitte stabil? Beschreibungen in der Lesesprache oder auf Englisch? 🎧 pt-PT vs. pt-BR per Beschreibung erreichbar? Welche Stil-Knöpfe kommen an? | Workflow bestätigt (`presets.json` ist später entfallen) |
 | **S4 PDFs** | 10 echte PDFs: Behördenbrief, Zeitung, Buch, zweispaltig, Scan, Handy-Foto, ein portugiesisches PDF | Bereinigungsregeln, OCR-Schwellen |
 | **S5 MP3** | Baut `SwiftLAME` mit aktuellem Xcode? Wenn nicht: LAME 3.100 als eigenes C-Target. ID3v2 setzen, Datei in Musik/Finder prüfen. | Encoder-Weg gewählt |
 
 ### Phase 1 – Kern-Pipeline als CLI
 
-`vorleser-cli brief.pdf --voice de-helga --style ruhig -o brief.mp3`
+`vorleser-cli brief.pdf --voice own-1234abcd -o brief.mp3`
 - Mit Spracherkennung, Fortsetzen, Prüfung, Pausen, Lautheit, MP3, Kapiteldateien.
 - Golden-File-Tests für TextPrep je Sprache.
-- `vorleser-cli design-presets`: erzeugt aus `presets.json` je Stimme und Stil
-  3 Kandidaten (verschiedene Seeds) in einen Ordner.
-- 🎧 Du hörst im Finder per Leertaste rein und löschst schlechte Kandidaten.
-  `vorleser-cli adopt-presets` übernimmt jeweils den ersten verbliebenen.
-  Gründlich anhören musst du Deutsch und Portugiesisch, den Rest nur stichprobenartig.
+- Eigene Stimmen kommen per `import-voice` und `design-voice`. `design-presets` und
+  `adopt-presets` sind entfallen (keine fertigen Stimmen mehr).
 
 ### Phase 2 – App-MVP
 - Bildschirme ① bis ④, die Liste „Meine Hörbücher“ und die Spracherkennung in Schritt 2.
-- Fertige Stimmen und Stil-Knöpfe, sofort Vorlesen bei kurzen Texten.
+- Eigene Stimmen (ohne fertige Stimmen und Stil-Knöpfe), sofort Vorlesen bei kurzen Texten.
 - Player, Restzeit, Schlafsperre, Mitteilung, Teilen.
 - Oberfläche auf Deutsch und Portugiesisch.
 - `scripts/install.sh`.

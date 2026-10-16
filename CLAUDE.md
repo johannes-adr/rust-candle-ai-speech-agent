@@ -91,8 +91,9 @@ was du in jeder Sitzung brauchst.
   - Installieren: `scripts/install.sh`
 - Modelle liegen im HF-Cache bzw. später unter
   `~/Library/Application Support/Vorleser/Models`, nie im Repo.
-- Stimmen-Referenzen in `Resources/Voices` sind eingecheckt (ALAC/.caf + .txt).
-  Testausgaben gehören nach `spike-output/` und sind ignoriert.
+- Es gibt keine fertigen Stimmen. Jede Stimme (aufgenommen, importiert, beschrieben) liegt unter
+  `~/Library/Application Support/Vorleser/Voices` als Audio (.caf) plus eigener Text (.txt);
+  als `refText` dient immer dieser gespeicherte Text. Testausgaben gehören nach `spike-output/` und sind ignoriert.
 
 ## Konventionen
 
