@@ -64,6 +64,10 @@ public struct Project: Codable, Sendable, Equatable, Identifiable {
     public var tempo: Double
     public var state: ProjectState
     public var chunks: [ProjectChunk]
+    /// `true`, wenn die Zwischendateien (`chunks/`) bewusst gelöscht wurden („Aufräumen“ im Helfer-Fenster).
+    /// Dann gilt ein fertiges Projekt weiter als fertig; die MP3 ist die einzige Kopie. Fehlt das Feld (alte
+    /// Manifeste), ist es `nil` = nicht aufgeräumt.
+    public var intermediatesRemoved: Bool?
 
     public init(
         id: UUID = UUID(), title: String, createdAt: Date = Date(), sourceHash: String,

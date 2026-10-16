@@ -235,6 +235,8 @@ public actor ProjectStore {
 
     /// true, wenn etwas korrigiert wurde.
     private func reconcile(_ p: inout Project) -> Bool {
+        // Bewusst aufgeräumt: fehlende Abschnittsdateien sind kein Schaden.
+        if p.intermediatesRemoved == true { return false }
         let store = chunkStore(for: p.id)
         var changed = false
         for i in p.chunks.indices where p.chunks[i].status == .done || p.chunks[i].status == .suspicious {
