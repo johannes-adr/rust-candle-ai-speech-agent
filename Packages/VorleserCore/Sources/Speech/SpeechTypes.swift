@@ -19,22 +19,10 @@ public enum ModelBits: Int, Sendable, CaseIterable, Codable {
 public typealias ModelSpec = ModelRef
 
 extension ModelRef {
-    /// Gepinnte Repos (Stand 16.10.2026, siehe docs/spikes/S1-engine.md). Die Dateilisten mit
-    /// Prüfsummen stehen als Manifeste in `ModelSetup/Manifests`.
+    /// Gepinnte Repos aus `ModelSetup/Manifests/models.json` (ändern mit `vorleser-cli models use`).
+    /// Die Dateilisten mit Prüfsummen stehen als Manifeste daneben.
     public static func pinned(_ kind: ModelKind, bits: ModelBits) -> ModelRef? {
-        switch (kind, bits) {
-        case (.base, .four):
-            ModelRef(repo: "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-4bit",
-                     revision: "37e955a1deb861c088ae5f3a67043185f3d1a60c")
-        case (.base, .eight):
-            ModelRef(repo: "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-8bit",
-                     revision: "e7dd0585652209fa0d7783659aad4e8a324de11c")
-        case (.voiceDesign, .four):
-            ModelRef(repo: "mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-4bit",
-                     revision: "5c390979e4b93af5f2932f90742ca99c7dd04687")
-        default:
-            nil
-        }
+        ModelCatalog.ref(kind: kind.rawValue, bits: bits.rawValue)
     }
 
     /// Alte Schreibweise (Entwickler-Cache). Siehe `huggingFaceSnapshotDirectory(cacheRoot:)`.
