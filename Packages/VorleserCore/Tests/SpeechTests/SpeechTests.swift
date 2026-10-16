@@ -1,6 +1,7 @@
 import AVFoundation
 import Foundation
 import Testing
+import ModelSetup
 import TextPrep
 
 @testable import VorleserSpeech
@@ -28,7 +29,8 @@ import TextPrep
 }
 
 @Test func missingModelThrows() async {
-    let engine = MLXQwenEngine(bits: .four, cacheRoot: URL(fileURLWithPath: "/nonexistent"))
+    let empty = FileManager.default.temporaryDirectory.appendingPathComponent("leer-\(UUID())")
+    let engine = MLXQwenEngine(bits: .four, store: ModelStore(root: empty), cacheRoot: URL(fileURLWithPath: "/nonexistent"))
     await #expect(throws: SpeechEngineError.self) { try await engine.load(.base) }
     let rate = await engine.sampleRate
     #expect(rate == 0)

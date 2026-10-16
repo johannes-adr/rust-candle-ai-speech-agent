@@ -6,6 +6,7 @@
 //   vorleser-cli adopt-presets <Ordner>
 //   vorleser-cli import-voice <Datei> --lang de --name "Oma" --consent   (Phase 3)
 //   vorleser-cli delete-voice <id>
+//   vorleser-cli models status|install|manifest   (Phase 5: Modellordner)
 import ArgumentParser
 import DocumentImport
 import Foundation
@@ -19,7 +20,7 @@ struct Vorleser: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "vorleser-cli",
         abstract: "Wandelt PDF oder Text in eine MP3 um (Qwen3-TTS, lokal).",
-        subcommands: [Read.self, Voices.self, DesignPresets.self, AdoptPresets.self, ImportVoice.self, DeleteVoice.self, CheckReading.self, DesignVoice.self],
+        subcommands: [Read.self, Voices.self, DesignPresets.self, AdoptPresets.self, ImportVoice.self, DeleteVoice.self, CheckReading.self, DesignVoice.self, Models.self],
         defaultSubcommand: Read.self)
 }
 

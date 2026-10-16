@@ -9,6 +9,7 @@ let package = Package(
     products: [
         .library(name: "DocumentImport", targets: ["DocumentImport"]),
         .library(name: "TextPrep", targets: ["TextPrep"]),
+        .library(name: "ModelSetup", targets: ["ModelSetup"]),
         .library(name: "VorleserSpeech", targets: ["VorleserSpeech"]),
         .library(name: "AudioOut", targets: ["AudioOut"]),
         .library(name: "VoiceCapture", targets: ["VoiceCapture"]),
@@ -24,6 +25,9 @@ let package = Package(
     ],
     targets: [
         .target(name: "TextPrep"),
+        // Phase 5: Modellordner, Manifeste, Download, Prüfsummen, HF-Cache-Import. Bewusst ohne MLX,
+        // damit Tests schnell sind und die Einrichtung ohne Sprach-Engine laufen kann.
+        .target(name: "ModelSetup", resources: [.copy("Manifests")]),
         .target(name: "DocumentImport", dependencies: ["TextPrep"]),
         // Heißt `VorleserSpeech`, weil Apples Speech-Framework (SpeechAnalyzer, SFSpeechRecognizer)
         // denselben Modulnamen hat: `import Speech` fand sonst je nach Bauzustand das falsche Modul.
@@ -31,7 +35,7 @@ let package = Package(
         .target(
             name: "VorleserSpeech",
             dependencies: [
-                "TextPrep", "AudioOut",
+                "TextPrep", "AudioOut", "ModelSetup",
                 .product(name: "MLXAudioTTS", package: "mlx-audio-swift"),
                 .product(name: "MLXAudioCore", package: "mlx-audio-swift"),
                 .product(name: "MLX", package: "mlx-swift"),
@@ -62,7 +66,7 @@ let package = Package(
         .executableTarget(
             name: "vorleser-cli",
             dependencies: [
-                "DocumentImport", "TextPrep", "VorleserSpeech", "AudioOut", "Projects", "Pipeline", "VoiceCapture",
+                "DocumentImport", "TextPrep", "VorleserSpeech", "AudioOut", "Projects", "Pipeline", "VoiceCapture", "ModelSetup",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ],
             // SwiftPM verlinkt gegen SDK 26.0; damit meldet das Translation-Framework installierte
@@ -78,7 +82,8 @@ let package = Package(
             dependencies: ["DocumentImport", "TextPrep"],
             resources: [.copy("Fixtures")]
         ),
-        .testTarget(name: "SpeechTests", dependencies: ["VorleserSpeech"]),
+        .testTarget(name: "SpeechTests", dependencies: ["VorleserSpeech", "ModelSetup"]),
+        .testTarget(name: "ModelSetupTests", dependencies: ["ModelSetup"]),
         .testTarget(name: "AudioOutTests", dependencies: ["AudioOut"]),
         .testTarget(name: "VoiceCaptureTests", dependencies: ["VoiceCapture", "TextPrep", "AudioOut"]),
         .testTarget(name: "PipelineTests", dependencies: ["Pipeline", "VorleserSpeech", "Projects", "TextPrep", "AudioOut"]),
