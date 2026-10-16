@@ -10,7 +10,7 @@ Das frühere Rust/Candle-Projekt liegt auf `main`.
 
 ## Weiterarbeiten mit Claude Code auf dem Mac
 
-Voraussetzungen: macOS 26, Xcode 26 (App Store), Homebrew, Claude Code.
+Voraussetzungen: macOS 26, Xcode 27 (App Store), Homebrew, Claude Code.
 
 ```bash
 brew install xcodegen

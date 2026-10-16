@@ -1,0 +1,78 @@
+[
+ {
+  "in": "Am 3.5.2024 um 14:30 Uhr kostete es 12,50 €.",
+  "out": "Am dritten Mai zweitausendvierundzwanzig um vierzehn Uhr dreißig kostete es zwölf Euro fünfzig."
+ },
+ {
+  "in": "3.5.2024",
+  "out": "dritter Mai zweitausendvierundzwanzig"
+ },
+ {
+  "in": "2024-05-03",
+  "out": "dritter Mai zweitausendvierundzwanzig"
+ },
+ {
+  "in": "Am 3. Mai 2024 war es -5 °C.",
+  "out": "Am dritten Mai zweitausendvierundzwanzig war es minus fünf Grad Celsius."
+ },
+ {
+  "in": "Das Jahr 1984 und 2024.",
+  "out": "Das Jahr neunzehnhundertvierundachtzig und zweitausendvierundzwanzig."
+ },
+ {
+  "in": "1.000 Besucher und 19,99 Euro.",
+  "out": "eintausend Besucher und neunzehn Euro neunundneunzig."
+ },
+ {
+  "in": "19,99 und 19.99",
+  "out": "neunzehn Komma neun neun und neunzehn Komma neun neun"
+ },
+ {
+  "in": "Der Preis: 1.000,50 €, also 1 € mehr.",
+  "out": "Der Preis: eintausend Euro fünfzig, also ein Euro mehr."
+ },
+ {
+  "in": "0,50 €",
+  "out": "fünfzig Cent"
+ },
+ {
+  "in": "Es waren 25 km, 3,5 kg und 80 %, bei 21 °C.",
+  "out": "Es waren fünfundzwanzig Kilometer, drei Komma fünf Kilogramm und achtzig Prozent, bei einundzwanzig Grad Celsius."
+ },
+ {
+  "in": "1 kg und 1 h",
+  "out": "ein Kilogramm und eine Stunde"
+ },
+ {
+  "in": "Das sind 5 m² und 100 km/h.",
+  "out": "Das sind fünf Quadratmeter und einhundert Kilometer pro Stunde."
+ },
+ {
+  "in": "Um 9:05 und 14 Uhr, 1 h 5 min.",
+  "out": "Um neun Uhr fünf und vierzehn Uhr, eine Stunde fünf Minuten."
+ },
+ {
+  "in": "Tel. +49 30 123456 oder 030 123456.",
+  "out": "Tel. plus vier neun, drei null, eins zwei drei vier fünf sechs oder null drei null, eins zwei drei vier fünf sechs."
+ },
+ {
+  "in": "Siehe www.example.com/pfad und max.mustermann@web.de.",
+  "out": "Siehe www Punkt example Punkt com Schrägstrich pfad und max Punkt mustermann ät web Punkt de."
+ },
+ {
+  "in": "Der 2. Platz, z. B. Dr. Müller, usw.",
+  "out": "Der zweite Platz, zum Beispiel Doktor Müller, und so weiter."
+ },
+ {
+  "in": "Z. B. heute.",
+  "out": "Zum Beispiel heute."
+ },
+ {
+  "in": "COVID-19 und A4.",
+  "out": "COVID-neunzehn und A vier."
+ },
+ {
+  "in": "007 Fälle",
+  "out": "null null sieben Fälle"
+ }
+]

@@ -1,0 +1,103 @@
+// Start der App und Entwicklungshilfen (nur in Debug-Builds wirksam).
+import AppKit
+import Foundation
+
+extension AppModel {
+    /// Attrappe aktiv? Dann zeigt die Kopfzeile einen deutlichen Hinweis.
+    var isPreview: Bool { service is PreviewAudiobookService }
+
+    static func makeForLaunch() -> AppModel {
+        #if DEBUG
+        // Entwicklung: eigener Datenordner, damit weder Musik noch echte Einstellungen berührt werden.
+        if let dir = ProcessInfo.processInfo.environment["VORLESER_DATA_DIR"] {
+            let base = URL(fileURLWithPath: dir, isDirectory: true)
+            let settings = AppSettings(defaults: UserDefaults(suiteName: "de.vorleser.debug") ?? .standard)
+            settings.outputDirectory = base.appending(path: "Output", directoryHint: .isDirectory)
+            return AppModel(settings: settings, storeRoot: base.appending(path: "Projects", directoryHint: .isDirectory))
+        }
+        #endif
+        return AppModel()
+    }
+}
+
+#if DEBUG
+/// Springt für Screenshots direkt zu einem Bildschirm:
+/// VORLESER_DEMO=start|text|voice|language|working|done|problem, VORLESER_SNAPSHOT=<png>,
+/// VORLESER_APPEARANCE=dark|light, VORLESER_PREVIEW_SECONDS=<Sekunden Simulation>.
+@MainActor
+enum DebugLaunch {
+    private static var started = false
+
+    static func runIfRequested(_ model: AppModel) async {
+        let env = ProcessInfo.processInfo.environment
+        guard let demo = env["VORLESER_DEMO"], !started else { return }
+        started = true
+        switch env["VORLESER_APPEARANCE"] {
+        case "dark": NSApp.appearance = NSAppearance(named: .darkAqua)
+        case "light": NSApp.appearance = NSAppearance(named: .aqua)
+        default: break
+        }
+        try? await Task.sleep(for: .seconds(1))
+
+        switch demo {
+        case "start":
+            model.typedText = sample(paragraphs: 3)
+            model.submitTypedText()
+            model.startWork()
+            await waitUntil { model.screen == .done }
+            model.goHome()
+        case "text":
+            model.typedText = "Liebe Frau Meier,"
+            model.screen = .typeText
+        case "voice", "language":
+            model.typedText = sample(paragraphs: 3)
+            model.submitTypedText()
+            model.showLanguagePicker = demo == "language"
+        case "working":
+            model.typedText = sample(paragraphs: 40)
+            model.submitTypedText()
+            model.startWork()
+            await waitUntil { model.phase == .working && model.progress.fraction > 0.3 }
+        case "done":
+            model.typedText = sample(paragraphs: 3)
+            model.submitTypedText()
+            model.startWork()
+            await waitUntil { model.screen == .done }
+        case "problem":
+            model.screen = .problem("problem.noText")
+        default: break
+        }
+
+        try? await Task.sleep(for: .seconds(1))
+        if let path = env["VORLESER_SNAPSHOT"] {
+            snapshot(to: URL(fileURLWithPath: path))
+            NSApp.terminate(nil)
+        }
+    }
+
+    private static func waitUntil(_ condition: @MainActor () -> Bool) async {
+        for _ in 0..<600 {
+            if condition() { return }
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+    }
+
+    static func sample(paragraphs: Int) -> String {
+        let p = "Sehr geehrte Frau Meier, vielen Dank für Ihr Schreiben vom 3.5.2024. Wir haben Ihren Antrag geprüft und freuen uns, Ihnen mitzuteilen, dass die Kosten in Höhe von 12,50 € übernommen werden. Bitte melden Sie sich bei Rückfragen jederzeit bei uns."
+        return (0..<paragraphs).map { _ in p }.joined(separator: "\n\n")
+    }
+
+    private static func snapshot(to url: URL) {
+        guard let window = NSApp.windows.first(where: { $0.isVisible }), let view = window.contentView,
+              let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
+        view.cacheDisplay(in: view.bounds, to: rep)
+        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? rep.representation(using: .png, properties: [:])?.write(to: url)
+    }
+}
+#else
+@MainActor
+enum DebugLaunch {
+    static func runIfRequested(_ model: AppModel) async {}
+}
+#endif

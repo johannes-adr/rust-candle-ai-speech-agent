@@ -7,6 +7,7 @@
 import AVFoundation
 import Darwin
 import Foundation
+import Projects
 import Speech
 import TextPrep
 
@@ -56,6 +57,8 @@ func check(_ s: [Float], rate: Double) -> Check {
 }
 
 func f(_ x: Double, _ d: Int = 2) -> String { String(format: "%.\(d)f", x) }
+
+let spikeProject = UUID(uuidString: "00000000-0000-0000-0000-0000000000S1".replacingOccurrences(of: "S1", with: "51"))!
 
 // MARK: Texte
 
@@ -127,7 +130,7 @@ func runBench(bits: ModelBits, out: URL, interval: Double, langs: Set<String>) a
 
         var totalAudio = 0.0, totalWall = 0.0
         for (i, text) in s.chunks.enumerated() {
-            let seed = SeedDerivation.seed(project: "s1", index: i, attempt: 0)
+            let seed = SeedDerivation.seed(projectID: spikeProject, chunkIndex: i, attempt: 0)
             var all = [Float]()
             for try await part in await engine.speak(text, voice: handle, language: s.lang, seed: seed) { all += part }
             let st = await engine.lastStats!
@@ -142,7 +145,7 @@ func runBench(bits: ModelBits, out: URL, interval: Double, langs: Set<String>) a
         // Determinismus: gleicher Seed zweimal
         if s.lang == .de {
             var a = [Float](), b2 = [Float]()
-            let seed = SeedDerivation.seed(project: "s1", index: 99, attempt: 0)
+            let seed = SeedDerivation.seed(projectID: spikeProject, chunkIndex: 99, attempt: 0)
             let short = "Das ist ein kurzer Test, um zu prüfen, ob derselbe Startwert dieselbe Aufnahme ergibt."
             for try await p in await engine.speak(short, voice: handle, language: s.lang, seed: seed) { a += p }
             for try await p in await engine.speak(short, voice: handle, language: s.lang, seed: seed) { b2 += p }

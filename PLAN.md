@@ -1,6 +1,6 @@
 # Plan: „Vorleser“ – PDF/Text → MP3 mit Qwen3-TTS
 
-Stand: 16.10.2026 · Zielgerät: Mac mit M4, 16 GB RAM, macOS 26 · Status: **Plan, noch kein Code**
+Stand: 16.10.2026 · Zielgerät: Mac mit M4, macOS 26 (Budget 16 GB RAM; das Gerät hat 24 GB) · Xcode 27 / Swift 6.4 · Status: **Spikes laufen**
 
 Ziel: Eine Mac-App, mit der eine Oma ohne Hilfe einen Brief, ein PDF oder einen
 Text in eine MP3 verwandelt. Vorgelesen wird von einer fertigen Stimme, einer
@@ -16,7 +16,7 @@ Umgesetzt wird auf dem Mac mit Claude Code. Arbeitsregeln dafür stehen in
 
 | Thema | Entscheidung | Warum |
 | --- | --- | --- |
-| Plattform | **Swift 6 + SwiftUI, native macOS-App** (macOS 26, Xcode 26) | App-Icon im Dock statt Terminal/Browser; PDFKit, Vision-OCR, Mikrofon, Teilen, Mitteilungen gibt es eingebaut |
+| Plattform | **Swift 6 + SwiftUI, native macOS-App** (macOS 26, Xcode 27) | App-Icon im Dock statt Terminal/Browser; PDFKit, Vision-OCR, Mikrofon, Teilen, Mitteilungen gibt es eingebaut |
 | Inferenz | **MLX** (Metal-GPU) über `mlx-audio-swift`; `VocelloQwen3Core` als Plan B | 4/8-bit, ca. 3 GB Spitzenspeicher, schneller als Echtzeit (§2.2) |
 | Modelle | **Qwen3-TTS-12Hz-1.7B-Base** (Klonen, Langtext) + **1.7B-VoiceDesign** (Stimme beschreiben) | Base hält eine Stimme über 100 Abschnitte gleich; VoiceDesign wird nur bei Bedarf geladen |
 | Stil-Anweisungen | **Design → Klon**: Die Beschreibung erzeugt einmal eine Referenzaufnahme, das Dokument wird dann mit Base geklont | Offizieller Qwen-Workflow für konsistente Stimmen; Base ignoriert `instruct` |
@@ -110,7 +110,7 @@ Vorgehen bei der Engine:
 
 | Aufgabe | macOS-API |
 | --- | --- |
-| PDF-Text mit Zeilenpositionen | PDFKit (`PDFSelection.selectionsByLine()`, Bounds) |
+| PDF-Text mit Zeilenpositionen | PDFKit (`PDFSelection.selectionsByLine()`, Bounds). Achtung (Spike S4): PDFKit-Zeilen laufen über Spalten und Tabellenzellen; deshalb jede Zeile an Wortlücken in Stücke teilen (Wörter über `selection(for: NSRange).bounds` messen; `characterBounds(at:)` ist unbrauchbar) |
 | Scans / Fotos | Vision `RecognizeDocumentsRequest` (Absätze); Fallback `VNRecognizeTextRequest` |
 | Word / RTF / ODT / HTML | `NSAttributedString(url:)` liest .docx, .odt und .rtf direkt |
 | Sätze trennen, Sprache erkennen | NaturalLanguage (`NLTokenizer`, `NLLanguageRecognizer`), alle 10 Sprachen inkl. CJK |
@@ -264,13 +264,16 @@ Project { id, title, sourceHash, language, voiceID, style, tempo, chunks }   // 
 2. **Sprache erkennen**: `NLLanguageRecognizer` über das ganze Dokument,
    eingeschränkt auf die 10 Sprachen. Ist sie unsicher, fragt Schritt 2 nach.
 3. **Bereinigen** (nur PDF)
-   - Kopf- und Fußzeilen: wiederkehrende Zeilen am Seitenrand (≥ 50 % der
-     Seiten, Ziffern ignoriert) raus, ebenso einzelne Seitenzahlen.
+   - Kopf- und Fußzeilen: wiederkehrende Zeilen am Seitenrand (≥ 40 % der
+     Seiten, mind. 2, Ziffern ignoriert; 40 statt 50 %, weil Bücher wechselnde
+     Kolumnentitel links/rechts haben, Spike S4) raus, ebenso einzelne Seitenzahlen.
    - Silbentrennung zusammenziehen, wenn `NSSpellChecker` das Wort kennt.
    - Zeilen zu Absätzen zusammenfügen.
    - Überschriften werden Kapitelmarken mit längerer Pause.
    - Fußnotenziffern, Tabellen und Bildunterschriften überspringen.
-   - Zwei Spalten über die x-Position der Zeilen erkennen.
+   - Zwei Spalten erkennen: Zeilen zuerst an großen Wortlücken in Stücke
+     teilen, dann freie senkrechte Gasse über ein Überdeckungs-Histogramm der
+     x-Positionen suchen (Spike S4).
 4. **Normalisieren**: ein `Normalizer` je Sprache, gebaut nur für das, was
    Spike S2 als Problem zeigt.
    - Für alle Sprachen: Zahlen per `NumberFormatter(.spellOut)` mit Locale,
@@ -347,7 +350,7 @@ Grobe Erwartung: Bei einer RTF von 0,3–0,5 auf dem M4 ist ein 30-seitiges PDF
 
 ### 4.7 Bauen und Installieren ohne Developer-Account
 
-1. Xcode 26 aus dem App Store installieren, dann `brew install xcodegen`.
+1. Xcode 27 (oder neuer) aus dem App Store installieren, dann `brew install xcodegen`.
 2. Xcode › Settings › Accounts › Apple-ID hinzufügen. Damit entsteht das
    kostenlose „Personal Team“, das in `project.yml` als
    `DEVELOPMENT_TEAM` eingetragen wird.
@@ -382,7 +385,7 @@ nicht hören.
 | **S2 Sprachen** | Je Sprache ein Testsatz-Set (Zahlen, Datum, Geld, Abkürzungen, Fremdwörter). Mit Spracherkennung zurück in Text, dann vergleichen: was liest das Modell selbst richtig? Fehlerrate bei 250/500/900 Zeichen. Hilft eine niedrigere Temperatur? | Normalisierungsregeln je Sprache, Abschnittsgröße, Sampling |
 | **S3 Stimme** | Bleibt eine Design-Referenz über 30 geklonte Abschnitte stabil? Beschreibungen in der Lesesprache oder auf Englisch? 🎧 pt-PT vs. pt-BR per Beschreibung erreichbar? Welche Stil-Knöpfe kommen an? | Workflow bestätigt, `presets.json` festgelegt |
 | **S4 PDFs** | 10 echte PDFs: Behördenbrief, Zeitung, Buch, zweispaltig, Scan, Handy-Foto, ein portugiesisches PDF | Bereinigungsregeln, OCR-Schwellen |
-| **S5 MP3** | Baut `SwiftLAME` mit Xcode 26? Wenn nicht: LAME 3.100 als eigenes C-Target. ID3v2 setzen, Datei in Musik/Finder prüfen. | Encoder-Weg gewählt |
+| **S5 MP3** | Baut `SwiftLAME` mit aktuellem Xcode? Wenn nicht: LAME 3.100 als eigenes C-Target. ID3v2 setzen, Datei in Musik/Finder prüfen. | Encoder-Weg gewählt |
 
 ### Phase 1 – Kern-Pipeline als CLI
 

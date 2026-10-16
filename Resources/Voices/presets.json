@@ -1,0 +1,352 @@
+{
+  "version": 1,
+  "hinweis": "Vorläufig (Phase 2). Die Referenzaufnahmen (<id>-<stil>.caf mit .txt) erzeugt später vorleser-cli design-presets. Fehlt die Datei, ist Probe in der App deaktiviert.",
+  "styles": [
+    "calm",
+    "happy",
+    "fairytale",
+    "factual"
+  ],
+  "languages": {
+    "de": {
+      "voices": [
+        {
+          "id": "de-helga",
+          "name": "Helga",
+          "gender": "f",
+          "description": {
+            "de": "warm und freundlich",
+            "pt": "calorosa e amigável"
+          },
+          "reference": {
+            "calm": "de-helga-calm.caf",
+            "happy": "de-helga-happy.caf",
+            "fairytale": "de-helga-fairytale.caf",
+            "factual": "de-helga-factual.caf"
+          }
+        },
+        {
+          "id": "de-karl",
+          "name": "Karl",
+          "gender": "m",
+          "description": {
+            "de": "tief und ruhig",
+            "pt": "grave e calmo"
+          },
+          "reference": {
+            "calm": "de-karl-calm.caf",
+            "happy": "de-karl-happy.caf",
+            "fairytale": "de-karl-fairytale.caf",
+            "factual": "de-karl-factual.caf"
+          }
+        }
+      ]
+    },
+    "pt": {
+      "voices": [
+        {
+          "id": "pt-teresa",
+          "name": "Teresa",
+          "gender": "f",
+          "description": {
+            "de": "warm und freundlich",
+            "pt": "calorosa e amigável"
+          },
+          "reference": {
+            "calm": "pt-teresa-calm.caf",
+            "happy": "pt-teresa-happy.caf",
+            "fairytale": "pt-teresa-fairytale.caf",
+            "factual": "pt-teresa-factual.caf"
+          }
+        },
+        {
+          "id": "pt-antonio",
+          "name": "António",
+          "gender": "m",
+          "description": {
+            "de": "tief und ruhig",
+            "pt": "grave e calmo"
+          },
+          "reference": {
+            "calm": "pt-antonio-calm.caf",
+            "happy": "pt-antonio-happy.caf",
+            "fairytale": "pt-antonio-fairytale.caf",
+            "factual": "pt-antonio-factual.caf"
+          }
+        }
+      ]
+    },
+    "en": {
+      "voices": [
+        {
+          "id": "en-emma",
+          "name": "Emma",
+          "gender": "f",
+          "description": {
+            "de": "warm und freundlich",
+            "pt": "calorosa e amigável"
+          },
+          "reference": {
+            "calm": "en-emma-calm.caf",
+            "happy": "en-emma-happy.caf",
+            "fairytale": "en-emma-fairytale.caf",
+            "factual": "en-emma-factual.caf"
+          }
+        },
+        {
+          "id": "en-james",
+          "name": "James",
+          "gender": "m",
+          "description": {
+            "de": "tief und ruhig",
+            "pt": "grave e calmo"
+          },
+          "reference": {
+            "calm": "en-james-calm.caf",
+            "happy": "en-james-happy.caf",
+            "fairytale": "en-james-fairytale.caf",
+            "factual": "en-james-factual.caf"
+          }
+        }
+      ]
+    },
+    "es": {
+      "voices": [
+        {
+          "id": "es-lucia",
+          "name": "Lucía",
+          "gender": "f",
+          "description": {
+            "de": "warm und freundlich",
+            "pt": "calorosa e amigável"
+          },
+          "reference": {
+            "calm": "es-lucia-calm.caf",
+            "happy": "es-lucia-happy.caf",
+            "fairytale": "es-lucia-fairytale.caf",
+            "factual": "es-lucia-factual.caf"
+          }
+        },
+        {
+          "id": "es-carlos",
+          "name": "Carlos",
+          "gender": "m",
+          "description": {
+            "de": "tief und ruhig",
+            "pt": "grave e calmo"
+          },
+          "reference": {
+            "calm": "es-carlos-calm.caf",
+            "happy": "es-carlos-happy.caf",
+            "fairytale": "es-carlos-fairytale.caf",
+            "factual": "es-carlos-factual.caf"
+          }
+        }
+      ]
+    },
+    "fr": {
+      "voices": [
+        {
+          "id": "fr-claire",
+          "name": "Claire",
+          "gender": "f",
+          "description": {
+            "de": "warm und freundlich",
+            "pt": "calorosa e amigável"
+          },
+          "reference": {
+            "calm": "fr-claire-calm.caf",
+            "happy": "fr-claire-happy.caf",
+            "fairytale": "fr-claire-fairytale.caf",
+            "factual": "fr-claire-factual.caf"
+          }
+        },
+        {
+          "id": "fr-henri",
+          "name": "Henri",
+          "gender": "m",
+          "description": {
+            "de": "tief und ruhig",
+            "pt": "grave e calmo"
+          },
+          "reference": {
+            "calm": "fr-henri-calm.caf",
+            "happy": "fr-henri-happy.caf",
+            "fairytale": "fr-henri-fairytale.caf",
+            "factual": "fr-henri-factual.caf"
+          }
+        }
+      ]
+    },
+    "it": {
+      "voices": [
+        {
+          "id": "it-giulia",
+          "name": "Giulia",
+          "gender": "f",
+          "description": {
+            "de": "warm und freundlich",
+            "pt": "calorosa e amigável"
+          },
+          "reference": {
+            "calm": "it-giulia-calm.caf",
+            "happy": "it-giulia-happy.caf",
+            "fairytale": "it-giulia-fairytale.caf",
+            "factual": "it-giulia-factual.caf"
+          }
+        },
+        {
+          "id": "it-marco",
+          "name": "Marco",
+          "gender": "m",
+          "description": {
+            "de": "tief und ruhig",
+            "pt": "grave e calmo"
+          },
+          "reference": {
+            "calm": "it-marco-calm.caf",
+            "happy": "it-marco-happy.caf",
+            "fairytale": "it-marco-fairytale.caf",
+            "factual": "it-marco-factual.caf"
+          }
+        }
+      ]
+    },
+    "ru": {
+      "voices": [
+        {
+          "id": "ru-anna",
+          "name": "Anna",
+          "gender": "f",
+          "description": {
+            "de": "warm und freundlich",
+            "pt": "calorosa e amigável"
+          },
+          "reference": {
+            "calm": "ru-anna-calm.caf",
+            "happy": "ru-anna-happy.caf",
+            "fairytale": "ru-anna-fairytale.caf",
+            "factual": "ru-anna-factual.caf"
+          }
+        },
+        {
+          "id": "ru-dmitri",
+          "name": "Dmitri",
+          "gender": "m",
+          "description": {
+            "de": "tief und ruhig",
+            "pt": "grave e calmo"
+          },
+          "reference": {
+            "calm": "ru-dmitri-calm.caf",
+            "happy": "ru-dmitri-happy.caf",
+            "fairytale": "ru-dmitri-fairytale.caf",
+            "factual": "ru-dmitri-factual.caf"
+          }
+        }
+      ]
+    },
+    "zh": {
+      "voices": [
+        {
+          "id": "zh-mei",
+          "name": "Mei",
+          "gender": "f",
+          "description": {
+            "de": "warm und freundlich",
+            "pt": "calorosa e amigável"
+          },
+          "reference": {
+            "calm": "zh-mei-calm.caf",
+            "happy": "zh-mei-happy.caf",
+            "fairytale": "zh-mei-fairytale.caf",
+            "factual": "zh-mei-factual.caf"
+          }
+        },
+        {
+          "id": "zh-wei",
+          "name": "Wei",
+          "gender": "m",
+          "description": {
+            "de": "tief und ruhig",
+            "pt": "grave e calmo"
+          },
+          "reference": {
+            "calm": "zh-wei-calm.caf",
+            "happy": "zh-wei-happy.caf",
+            "fairytale": "zh-wei-fairytale.caf",
+            "factual": "zh-wei-factual.caf"
+          }
+        }
+      ]
+    },
+    "ja": {
+      "voices": [
+        {
+          "id": "ja-yuki",
+          "name": "Yuki",
+          "gender": "f",
+          "description": {
+            "de": "warm und freundlich",
+            "pt": "calorosa e amigável"
+          },
+          "reference": {
+            "calm": "ja-yuki-calm.caf",
+            "happy": "ja-yuki-happy.caf",
+            "fairytale": "ja-yuki-fairytale.caf",
+            "factual": "ja-yuki-factual.caf"
+          }
+        },
+        {
+          "id": "ja-haruto",
+          "name": "Haruto",
+          "gender": "m",
+          "description": {
+            "de": "tief und ruhig",
+            "pt": "grave e calmo"
+          },
+          "reference": {
+            "calm": "ja-haruto-calm.caf",
+            "happy": "ja-haruto-happy.caf",
+            "fairytale": "ja-haruto-fairytale.caf",
+            "factual": "ja-haruto-factual.caf"
+          }
+        }
+      ]
+    },
+    "ko": {
+      "voices": [
+        {
+          "id": "ko-minji",
+          "name": "Minji",
+          "gender": "f",
+          "description": {
+            "de": "warm und freundlich",
+            "pt": "calorosa e amigável"
+          },
+          "reference": {
+            "calm": "ko-minji-calm.caf",
+            "happy": "ko-minji-happy.caf",
+            "fairytale": "ko-minji-fairytale.caf",
+            "factual": "ko-minji-factual.caf"
+          }
+        },
+        {
+          "id": "ko-joon",
+          "name": "Joon",
+          "gender": "m",
+          "description": {
+            "de": "tief und ruhig",
+            "pt": "grave e calmo"
+          },
+          "reference": {
+            "calm": "ko-joon-calm.caf",
+            "happy": "ko-joon-happy.caf",
+            "fairytale": "ko-joon-fairytale.caf",
+            "factual": "ko-joon-factual.caf"
+          }
+        }
+      ]
+    }
+  }
+}

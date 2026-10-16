@@ -1,0 +1,66 @@
+[
+ {
+  "in": "Em 3/5/2024 às 14:30 custou 12,50 €.",
+  "out": "Em três de maio de dois mil e vinte e quatro às catorze horas e trinta custou doze euros e cinquenta."
+ },
+ {
+  "in": "3.5.2024",
+  "out": "três de maio de dois mil e vinte e quatro"
+ },
+ {
+  "in": "Em 3 de maio de 2024 e 1 de janeiro.",
+  "out": "Em três de maio de dois mil e vinte e quatro e primeiro de janeiro."
+ },
+ {
+  "in": "O ano de 1984 e 2024.",
+  "out": "O ano de mil novecentos e oitenta e quatro e dois mil e vinte e quatro."
+ },
+ {
+  "in": "São 1.000 pessoas e 19,99 euros.",
+  "out": "São mil pessoas e dezanove euros e noventa e nove."
+ },
+ {
+  "in": "19,99 e 19.99",
+  "out": "dezanove vírgula nove nove e dezanove vírgula nove nove"
+ },
+ {
+  "in": "Custa 1 € e 1.000.000 €.",
+  "out": "Custa um euro e um milhão de euros."
+ },
+ {
+  "in": "0,50 €",
+  "out": "cinquenta cêntimos"
+ },
+ {
+  "in": "Foram 25 km, 3,5 kg e 80%, com 21 °C.",
+  "out": "Foram vinte e cinco quilómetros, três vírgula cinco quilogramas e oitenta por cento, com vinte e um graus Celsius."
+ },
+ {
+  "in": "1 kg e 1 h e 2 h",
+  "out": "um quilograma e uma hora e duas horas"
+ },
+ {
+  "in": "Às 9:05 e 14h30, 1 h.",
+  "out": "Às nove horas e cinco e catorze horas e trinta, uma hora."
+ },
+ {
+  "in": "Ligue +351 912 345 678 ou (11) 98765-4321.",
+  "out": "Ligue mais três cinco um, nove um dois, três quatro cinco, seis sete oito ou um um, nove oito sete seis cinco, quatro três dois um."
+ },
+ {
+  "in": "Veja www.exemplo.pt/pagina e ana@mail.pt.",
+  "out": "Veja www ponto exemplo ponto pt barra pagina e ana arroba mail ponto pt."
+ },
+ {
+  "in": "O 1.º lugar e a 2.ª vez, p. ex. Dr. Silva, etc.",
+  "out": "O primeiro lugar e a segunda vez, por exemplo Doutor Silva, etcétera."
+ },
+ {
+  "in": "O 21.º andar",
+  "out": "O vigésimo primeiro andar"
+ },
+ {
+  "in": "R$ 5,00 e 2,5 m.",
+  "out": "cinco reais e dois vírgula cinco metros."
+ }
+]
