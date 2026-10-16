@@ -23,6 +23,8 @@ struct AudiobookJob: Sendable {
     var tempo: Double
     /// Gesetzt: dort weitermachen, `document` wird ignoriert.
     var resumeProjectID: UUID?
+    /// Bei mehreren Kapiteln zusätzlich eine Datei je Kapitel (Einstellung des Helfers).
+    var writeChapterFiles = true
 }
 
 struct AudiobookProgress: Sendable, Equatable {

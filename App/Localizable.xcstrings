@@ -70,6 +70,652 @@
         }
       }
     },
+    "camera.card.sub": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brief oder Buchseite hinlegen und mit dem iPhone aufnehmen"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pôr a carta ou a página do livro em cima da mesa e fotografar com o iPhone"
+          }
+        }
+      }
+    },
+    "camera.card.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vom iPhone fotografieren"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotografar com o iPhone"
+          }
+        }
+      }
+    },
+    "camera.denied.open": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einstellungen öffnen"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir as definições"
+          }
+        }
+      }
+    },
+    "camera.denied.text": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Damit Fotos gemacht werden dürfen, muss die Kamera für Vorleser erlaubt sein. Ihr Helfer kann das in den Systemeinstellungen unter „Datenschutz & Sicherheit“ und „Kamera“ einschalten."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para poder tirar fotografias, a câmara tem de estar autorizada para o Leitor. O seu ajudante pode ativá-la nas Definições do Sistema, em “Privacidade e segurança” e “Câmara”."
+          }
+        }
+      }
+    },
+    "camera.denied.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Kamera ist nicht erlaubt"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A câmara não está autorizada"
+          }
+        }
+      }
+    },
+    "camera.discard.no": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nein, weitermachen"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não, continuar"
+          }
+        }
+      }
+    },
+    "camera.discard.text": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die bisher aufgenommenen Seiten gehen dann verloren."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As páginas fotografadas até agora perdem-se."
+          }
+        }
+      }
+    },
+    "camera.discard.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotos verwerfen?"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descartar as fotografias?"
+          }
+        }
+      }
+    },
+    "camera.discard.yes": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ja, verwerfen"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sim, descartar"
+          }
+        }
+      }
+    },
+    "camera.more.another": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch eine Seite"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mais uma página"
+          }
+        }
+      }
+    },
+    "camera.more.count": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seiten bisher: %lld"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Páginas até agora: %lld"
+          }
+        }
+      }
+    },
+    "camera.more.done": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fertig, jetzt lesen"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concluído, ler agora"
+          }
+        }
+      }
+    },
+    "camera.more.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch eine Seite?"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mais uma página?"
+          }
+        }
+      }
+    },
+    "camera.partial.again": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neu fotografieren"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotografar de novo"
+          }
+        }
+      }
+    },
+    "camera.partial.continue": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trotzdem weiter"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continuar mesmo assim"
+          }
+        }
+      }
+    },
+    "camera.partial.text": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bei diesen Seiten konnte ich keinen Text erkennen: %@. Sie fehlen beim Vorlesen."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nestas páginas não consegui reconhecer texto: %@. Vão faltar na leitura."
+          }
+        }
+      }
+    },
+    "camera.partial.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht alle Seiten waren lesbar"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nem todas as páginas se conseguiram ler"
+          }
+        }
+      }
+    },
+    "camera.problem.noText": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf den Fotos konnte ich keinen Text lesen. Bitte nehmen Sie die Seite bei mehr Licht auf und halten Sie das iPhone ruhig."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não consegui ler texto nas fotografias. Fotografe a página com mais luz e mantenha o iPhone firme."
+          }
+        }
+      }
+    },
+    "camera.reading.cancel": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abbrechen"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancelar"
+          }
+        }
+      }
+    },
+    "camera.reading.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das dauert nur einen kleinen Moment."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demora só um instante."
+          }
+        }
+      }
+    },
+    "camera.reading.page": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seite %lld von %lld"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Página %lld de %lld"
+          }
+        }
+      }
+    },
+    "camera.reading.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Fotos werden gelesen …"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A ler as fotografias …"
+          }
+        }
+      }
+    },
+    "camera.review.again": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nochmal fotografieren"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotografar de novo"
+          }
+        }
+      }
+    },
+    "camera.review.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Zeilen sollen scharf und vollständig zu sehen sein."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todas as linhas devem estar nítidas e completas."
+          }
+        }
+      }
+    },
+    "camera.review.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ist die Seite gut zu lesen?"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A página lê-se bem?"
+          }
+        }
+      }
+    },
+    "camera.review.yes": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ja, weiter"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sim, continuar"
+          }
+        }
+      }
+    },
+    "camera.shoot.error": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das hat nicht geklappt. Bitte versuchen Sie es noch einmal."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não correu bem. Tente outra vez."
+          }
+        }
+      }
+    },
+    "camera.shoot.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die ganze Seite soll im Bild sein, mit gutem Licht und ohne Schatten."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A página inteira deve estar na imagem, com boa luz e sem sombras."
+          }
+        }
+      }
+    },
+    "camera.shoot.page": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seite %lld"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Página %lld"
+          }
+        }
+      }
+    },
+    "camera.shoot.take": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto machen"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tirar fotografia"
+          }
+        }
+      }
+    },
+    "camera.shoot.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legen Sie die Seite hin und halten Sie das iPhone darüber"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ponha a página em cima da mesa e segure o iPhone por cima"
+          }
+        }
+      }
+    },
+    "camera.title.fallback": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotografierter Text"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Texto fotografado"
+          }
+        }
+      }
+    },
+    "camera.waiting.helper": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird nichts gefunden? Dann fragen Sie bitte Ihren Helfer. Das iPhone muss mit demselben Apple-Konto angemeldet sein wie dieser Computer."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não encontra nada? Peça ajuda ao seu ajudante. O iPhone tem de ter a mesma conta Apple que este computador."
+          }
+        }
+      }
+    },
+    "camera.waiting.searching": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Es wird gesucht …"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A procurar …"
+          }
+        }
+      }
+    },
+    "camera.waiting.step1": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. Nehmen Sie Ihr iPhone zur Hand und entsperren Sie es."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. Pegue no seu iPhone e desbloqueie-o."
+          }
+        }
+      }
+    },
+    "camera.waiting.step2": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2. Legen Sie es in die Nähe des Computers."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2. Coloque-o perto do computador."
+          }
+        }
+      }
+    },
+    "camera.waiting.step3": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3. Warten Sie einen Moment. Es meldet sich von selbst."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3. Aguarde um momento. Ele liga-se sozinho."
+          }
+        }
+      }
+    },
+    "camera.waiting.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ihr iPhone wird gesucht …"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A procurar o seu iPhone …"
+          }
+        }
+      }
+    },
     "comingSoon.back": {
       "extractionState": "manual",
       "localizations": {
@@ -1052,6 +1698,958 @@
           "stringUnit": {
             "state": "translated",
             "value": "Precisa de ajuda?"
+          }
+        }
+      }
+    },
+    "helper.books.clean": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zwischendateien aufräumen"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limpar ficheiros intermédios"
+          }
+        }
+      }
+    },
+    "helper.books.cleanConfirm": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zwischendateien von „%@“ löschen? Das gibt %@ frei. Die Hörbuch-Datei bleibt erhalten."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apagar os ficheiros intermédios de “%@”? Liberta %@. O ficheiro do audiolivro mantém-se."
+          }
+        }
+      }
+    },
+    "helper.books.cleanYes": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ja, aufräumen"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sim, limpar"
+          }
+        }
+      }
+    },
+    "helper.books.cleaned": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufgeräumt: %@ frei."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limpo: %@ libertados."
+          }
+        }
+      }
+    },
+    "helper.books.delete": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Löschen"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apagar"
+          }
+        }
+      }
+    },
+    "helper.books.deleteConfirm": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ aus der Liste löschen? Die fertige Hörbuch-Datei im Ablageordner bleibt erhalten."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apagar “%@” da lista? O ficheiro do audiolivro na pasta de destino mantém-se."
+          }
+        }
+      }
+    },
+    "helper.books.deleteYes": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ja, löschen"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sim, apagar"
+          }
+        }
+      }
+    },
+    "helper.books.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Hörbücher."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ainda não há audiolivros."
+          }
+        }
+      }
+    },
+    "helper.books.info": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„Aufräumen“ löscht nur die Zwischendateien eines fertigen Hörbuchs. Die Hörbuch-Datei bleibt. Danach lässt es sich nicht mehr fortsetzen, das ist aber nicht mehr nötig."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Limpar” apaga apenas os ficheiros intermédios de um audiolivro concluído. O ficheiro do audiolivro mantém-se. Depois já não se pode retomar, mas isso deixa de ser necessário."
+          }
+        }
+      }
+    },
+    "helper.books.intermediate": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "davon %@ Zwischendateien"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dos quais %@ intermédios"
+          }
+        }
+      }
+    },
+    "helper.books.size": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ auf der Platte"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ no disco"
+          }
+        }
+      }
+    },
+    "helper.close": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schließen"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fechar"
+          }
+        }
+      }
+    },
+    "helper.folder.chapters.header": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kapitel"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capítulos"
+          }
+        }
+      }
+    },
+    "helper.folder.chapters.info": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bei Büchern mit mehreren Kapiteln entsteht neben der Hörbuch-Datei ein Ordner mit einer Datei je Kapitel, passend für USB-Stick oder CD."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Em livros com vários capítulos, junto ao ficheiro do audiolivro cria-se uma pasta com um ficheiro por capítulo, ideal para pen USB ou CD."
+          }
+        }
+      }
+    },
+    "helper.folder.chapters.toggle": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kapitel zusätzlich als einzelne Dateien speichern"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guardar também os capítulos como ficheiros separados"
+          }
+        }
+      }
+    },
+    "helper.folder.show": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordner im Finder zeigen"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar a pasta no Finder"
+          }
+        }
+      }
+    },
+    "helper.helper.test.button": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "So sieht der Hilfe-Knopf aus"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ver como é o botão de ajuda"
+          }
+        }
+      }
+    },
+    "helper.helper.test.caption": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorschau: Knopf oben rechts und das Fenster, das danach erscheint."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pré-visualização: o botão em cima à direita e a janela que aparece depois."
+          }
+        }
+      }
+    },
+    "helper.helper.test.header": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hilfe-Knopf ausprobieren"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Experimentar o botão de ajuda"
+          }
+        }
+      }
+    },
+    "helper.helper.test.info": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeigt, was die Nutzerin sieht, wenn sie oben rechts auf „Hilfe“ tippt."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra o que a utilizadora vê ao tocar em “Ajuda”, em cima à direita."
+          }
+        }
+      }
+    },
+    "helper.logs.chunk": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abschnitt %lld"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trecho %lld"
+          }
+        }
+      }
+    },
+    "helper.logs.copied": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopiert"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copiado"
+          }
+        }
+      }
+    },
+    "helper.logs.copy": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Protokoll kopieren"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copiar registo"
+          }
+        }
+      }
+    },
+    "helper.logs.failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "fehlgeschlagen"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "falhou"
+          }
+        }
+      }
+    },
+    "helper.logs.header": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fehlersuche"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resolução de problemas"
+          }
+        }
+      }
+    },
+    "helper.logs.info": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„Protokoll kopieren“ legt Version, Auffälligkeiten der letzten Hörbücher und die letzten Zeilen des Protokolls in die Zwischenablage, zum Einfügen in eine Nachricht. Es enthält Textanfänge der betroffenen Abschnitte."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Copiar registo” coloca na área de transferência a versão, as anomalias dos últimos audiolivros e as últimas linhas do registo, para colar numa mensagem. Contém o início do texto dos trechos afetados."
+          }
+        }
+      }
+    },
+    "helper.logs.none": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Auffälligkeiten."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sem anomalias."
+          }
+        }
+      }
+    },
+    "helper.logs.openFolder": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordner der Logs öffnen"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir a pasta dos registos"
+          }
+        }
+      }
+    },
+    "helper.logs.page": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seite %lld"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "página %lld"
+          }
+        }
+      }
+    },
+    "helper.logs.problems": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auffälligkeiten der letzten Hörbücher"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anomalias dos últimos audiolivros"
+          }
+        }
+      }
+    },
+    "helper.logs.suspicious": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "auffällig"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "suspeito"
+          }
+        }
+      }
+    },
+    "helper.quality.accurate": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etwas genauer"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um pouco mais preciso"
+          }
+        }
+      }
+    },
+    "helper.quality.applies": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Wahl gilt ab dem nächsten Start der Sprachausgabe. Läuft gerade ein Hörbuch, bleibt es dabei."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A escolha vale a partir do próximo arranque da leitura. Um audiolivro em curso continua como está."
+          }
+        }
+      }
+    },
+    "helper.quality.fast": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schneller (empfohlen)"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mais rápido (recomendado)"
+          }
+        }
+      }
+    },
+    "helper.quality.header": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genauigkeit der Sprachausgabe"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Precisão da leitura em voz alta"
+          }
+        }
+      }
+    },
+    "helper.quality.info": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemessen auf dem M4: „Etwas genauer“ braucht etwa 12 % mehr Zeit und etwa 0,4 GB mehr Arbeitsspeicher. Ob man den Unterschied hört, ist nicht belegt; im Zweifel „Schneller“ lassen."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Medido no M4: “Um pouco mais preciso” demora cerca de 12 % mais e usa cerca de 0,4 GB a mais de memória. Não está provado que se ouça a diferença; em caso de dúvida, deixe “Mais rápido”."
+          }
+        }
+      }
+    },
+    "helper.tab.books": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hörbücher"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audiolivros"
+          }
+        }
+      }
+    },
+    "helper.tab.folder": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ablage"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pasta"
+          }
+        }
+      }
+    },
+    "helper.tab.helper": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Helfer"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajudante"
+          }
+        }
+      }
+    },
+    "helper.tab.logs": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Protokolle"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registos"
+          }
+        }
+      }
+    },
+    "helper.tab.quality": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qualität"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qualidade"
+          }
+        }
+      }
+    },
+    "helper.tab.voices": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stimmen"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vozes"
+          }
+        }
+      }
+    },
+    "helper.tempo.header": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprechtempo (Standard)"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Velocidade de leitura (predefinida)"
+          }
+        }
+      }
+    },
+    "helper.tempo.info": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gilt für neue Hörbücher. Die Nutzerin kann es in Schritt 2 trotzdem ändern."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vale para novos audiolivros. A utilizadora pode mudá-la no passo 2."
+          }
+        }
+      }
+    },
+    "helper.voices.builtIn": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fertige Stimmen"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vozes incluídas"
+          }
+        }
+      }
+    },
+    "helper.voices.origin.builtIn": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "fertig"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "incluída"
+          }
+        }
+      }
+    },
+    "helper.voices.origin.designed": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "beschrieben"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "descrita"
+          }
+        }
+      }
+    },
+    "helper.voices.origin.recorded": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "aufgenommen"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "gravada"
+          }
+        }
+      }
+    },
+    "helper.voices.own": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eigene und beschriebene Stimmen"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vozes próprias e descritas"
+          }
+        }
+      }
+    },
+    "helper.voices.ownEmpty": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine eigenen Stimmen."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ainda não há vozes próprias."
+          }
+        }
+      }
+    },
+    "helper.voices.rename": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umbenennen"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mudar o nome"
+          }
+        }
+      }
+    },
+    "helper.voices.renameField": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nome"
+          }
+        }
+      }
+    },
+    "helper.voices.renameSave": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speichern"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guardar"
+          }
+        }
+      }
+    },
+    "helper.voices.renameTitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neuer Name für die Stimme"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Novo nome para a voz"
+          }
+        }
+      }
+    },
+    "helper.voices.stop": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stopp"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parar"
+          }
+        }
+      }
+    },
+    "helper.window.note": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Fenster ist für den Helfer, nicht für die Nutzerin. Alle Änderungen gelten sofort."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta janela é para o ajudante, não para a utilizadora. Todas as alterações valem de imediato."
           }
         }
       }

@@ -69,6 +69,9 @@ targets:
         # Die sichtbaren Texte stehen in App/InfoPlist.xcstrings (de, pt-PT).
         NSMicrophoneUsageDescription: Vorleser nimmt Ihre Stimme auf, damit vorgelesen werden kann wie Sie sprechen.
         NSSpeechRecognitionUsageDescription: Vorleser prüft damit, ob der Lesetext bei Ihrer Aufnahme vorgelesen wurde.
+        NSCameraUsageDescription: Vorleser nutzt die Kamera Ihres iPhones, um Briefe und Buchseiten zum Vorlesen zu fotografieren.
+        # Ohne diesen Schlüssel meldet macOS das iPhone nur als „externe Kamera“ (Continuity Camera, App/Camera).
+        NSCameraUseContinuityCameraDeviceType: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: de.vorleser.app

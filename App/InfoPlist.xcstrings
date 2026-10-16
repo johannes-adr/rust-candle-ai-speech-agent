@@ -36,6 +36,23 @@
         }
       }
     },
+    "NSCameraUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorleser nutzt die Kamera Ihres iPhones, um Briefe und Buchseiten zum Vorlesen zu fotografieren."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Leitor usa a câmara do seu iPhone para fotografar cartas e páginas de livros que serão lidas em voz alta."
+          }
+        }
+      }
+    },
     "NSMicrophoneUsageDescription": {
       "extractionState": "manual",
       "localizations": {

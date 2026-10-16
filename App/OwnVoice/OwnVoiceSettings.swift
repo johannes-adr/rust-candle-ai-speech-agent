@@ -1,5 +1,5 @@
-// Helfer-Einstellungen (⌘,): eigene Stimmen ansehen, löschen (mit Nachfrage) und eine vorhandene
-// Aufnahme als Stimme hinzufügen. Normale Systemgröße, denn das ist für den Helfer.
+// Helfer-Einstellungen (⌘,, Reiter „Stimmen“): eine vorhandene Aufnahme als Stimme hinzufügen. Die Liste
+// mit Löschen/Umbenennen steht in App/Helper/VoicesTab.swift. Normale Systemgröße, denn das ist für den Helfer.
 import AppKit
 import Foundation
 import Observation
@@ -67,51 +67,14 @@ final class OwnVoiceImportModel {
     }
 }
 
-struct OwnVoiceSettingsSection: View {
-    @Environment(AppModel.self) private var model
+/// Formular „Aufnahme als Stimme hinzufügen“ im Helfer-Fenster (Reiter „Stimmen“).
+struct VoiceImportForm: View {
     @State private var importModel = OwnVoiceImportModel()
-    @State private var refresh = 0
-    @State private var pendingDelete: RecordedVoiceInfo?
-
-    private var store: RecordedVoiceStore { model.library.store.custom ?? RecordedVoiceStore() }
+    var store: RecordedVoiceStore
+    /// Nach erfolgreichem Import (Liste neu laden).
+    var onImported: () -> Void = {}
 
     var body: some View {
-        Section("ownVoice.settings.header") {
-            let voices = { _ = refresh; return store.list() }()
-            if voices.isEmpty {
-                Text("ownVoice.settings.empty").foregroundStyle(.secondary)
-            }
-            ForEach(voices) { v in
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text(v.name)
-                        Text("\(L(v.language.nameKey)) · \(Fmt.minutes(v.durationSeconds)) · \(v.createdAt.formatted(date: .abbreviated, time: .omitted))")
-                            .font(.system(size: 12)).foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    Button("ownVoice.settings.delete") { pendingDelete = v }
-                }
-            }
-            DisclosureGroup("ownVoice.settings.import.header") {
-                importForm
-            }
-        }
-        .confirmationDialog(
-            pendingDelete.map { L("ownVoice.settings.deleteConfirm", $0.name) } ?? "",
-            isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
-            titleVisibility: .visible
-        ) {
-            Button("ownVoice.settings.deleteYes", role: .destructive) {
-                if let v = pendingDelete { try? store.delete(id: v.id) }
-                pendingDelete = nil
-                refresh += 1
-                model.validateSelectedVoice()
-            }
-            Button("ownVoice.settings.deleteNo", role: .cancel) { pendingDelete = nil }
-        }
-    }
-
-    @ViewBuilder private var importForm: some View {
         @Bindable var m = importModel
         Text("ownVoice.settings.import.info").font(.system(size: 12)).foregroundStyle(.secondary)
         HStack {
@@ -137,6 +100,6 @@ struct OwnVoiceSettingsSection: View {
             case .idle: EmptyView()
             }
         }
-        .onChange(of: importModel.state) { _, new in if new == .done { refresh += 1 } }
+        .onChange(of: importModel.state) { _, new in if new == .done { onImported() } }
     }
 }

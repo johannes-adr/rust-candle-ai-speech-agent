@@ -18,6 +18,8 @@ enum Screen: Equatable {
     case describeVoice
     /// Geführte Aufnahme der eigenen Stimme (App/OwnVoice).
     case ownVoice
+    /// „Vom iPhone fotografieren“ (App/Camera).
+    case camera
     case working
     case done
     /// Freundliche Fehlermeldung (Schlüssel aus Localizable.xcstrings).
@@ -79,6 +81,10 @@ final class AppModel {
     var projects: [ProjectSummary] = []
     /// Läuft der Ablauf „Meine eigene Stimme“? (App/OwnVoice)
     var ownVoice: OwnVoiceFlow?
+    /// Läuft „Vom iPhone fotografieren“? (App/Camera)
+    var camera: CameraFlow?
+    /// Erzeugt die Kamera; Tests und Entwicklungshilfen setzen eine Attrappe.
+    var makeCamera: @MainActor () -> any PhotoCamera = { ContinuityCamera() }
 
     // Overlays (eigene große Dialoge statt kleiner Systemfenster)
     var showHelp = false
@@ -197,6 +203,7 @@ final class AppModel {
             } catch is CancellationError {
                 return
             } catch DocumentImportError.empty {
+                AppLog.warning("import", "Datei \(ext): kein Text gefunden")
                 screen = .problem("problem.noText")
             } catch DocumentImportError.passwordProtected {
                 screen = .problem("problem.locked")
@@ -226,7 +233,7 @@ final class AppModel {
         return trimmed.isEmpty ? String(localized: "title.fallback") : trimmed
     }
 
-    private func makeDraft(
+    func makeDraft(
         title: String, document: TextDocument, sourceHash: String, sourceKind: String,
         sourceData: Data?, sourceExtension: String?
     ) {
@@ -242,6 +249,7 @@ final class AppModel {
             title: title, document: document, sourceHash: sourceHash, sourceKind: sourceKind,
             sourceData: sourceData, sourceExtension: sourceExtension, detection: detection, language: language)
         d.voiceID = library.voices(for: language).first?.id
+        d.tempo = settings.defaultTempo
         draft = d
         // Unsichere Erkennung: Sprachauswahl sofort zeigen.
         showLanguagePicker = detection?.isUncertain ?? true
@@ -291,8 +299,9 @@ final class AppModel {
             title: d.title, document: d.document, sourceHash: d.sourceHash, sourceKind: d.sourceKind,
             sourceData: d.sourceData, sourceExtension: d.sourceExtension, language: d.language,
             voiceID: voiceID, voiceName: voiceName, style: styleKey(forVoice: voiceID, style: d.style), tempo: d.tempo.factor,
-            resumeProjectID: nil)
+            resumeProjectID: nil, writeChapterFiles: settings.chaptersAsFiles)
         instantPlayback = d.isShort
+        AppLog.info("work", "Start: \(d.language.rawValue), \(d.document.blocks.count) Blöcke, Stimme \(voiceID), Tempo \(d.tempo.factor), Qualität \(settings.quality.rawValue)")
         run(job)
     }
 
@@ -325,6 +334,7 @@ final class AppModel {
             phase = .finishing
             instant.finishInput()
         case .finished(let r):
+            AppLog.info("work", "Fertig: \(Int(r.durationSeconds)) s Audio")
             result = r
             phase = .finishing
             Task {
@@ -338,6 +348,7 @@ final class AppModel {
                 await refreshProjects()
             }
         case .failed(let key):
+            AppLog.error("work", "Erzeugung fehlgeschlagen: \(key)")
             instant.stop()
             instantPlayback = false
             screen = .problem(key)
@@ -399,7 +410,7 @@ final class AppModel {
                     title: p.title, document: TextDocument(blocks: []), sourceHash: p.sourceHash,
                     sourceKind: p.sourceKind, sourceData: nil, sourceExtension: nil, language: p.language,
                     voiceID: p.voiceID, voiceName: voiceName(p.voiceID), style: p.style,
-                    tempo: p.tempo, resumeProjectID: p.id)
+                    tempo: p.tempo, resumeProjectID: p.id, writeChapterFiles: settings.chaptersAsFiles)
                 run(job)
             }
         }
