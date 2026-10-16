@@ -81,6 +81,13 @@ Wichtig für uns:
 Lösung, ohne Python und ohne Server. Ein M4 sollte zwischen den M2- und den
 M6-Werten von Vocello liegen. Das misst Spike S1.
 
+> **Ergebnis S1 (16.10.2026, [docs/spikes/S1-engine.md](docs/spikes/S1-engine.md)):**
+> `mlx-audio-swift` v0.1.5 auf dem M4 erreicht **RTF 0,82–0,95** (4-bit/8-bit), also nur
+> ca. 1,1–1,2× Echtzeit statt ≤ 0,5. Speicher passt (3,5 GB im Betrieb bei 4-bit).
+> Der Klon-Prompt wird über `prepareReferenceConditioning` einmal berechnet, nicht pro Aufruf.
+> Vorläufig: 4-bit, Upstream. Ob Vocello vendort wird (erwartet RTF ≈ 0,55), entscheidet
+> der Nutzer nach dem Hörtest.
+
 Vorgehen bei der Engine:
 1. Start mit **`mlx-audio-swift`** (SwiftPM, MIT) hinter einem eigenen
    `SpeechEngine`-Protokoll.
@@ -346,7 +353,7 @@ Auf der Platte:
 - MP3 ca. 29 MB pro Stunde.
 
 Grobe Erwartung: Bei einer RTF von 0,3–0,5 auf dem M4 ist ein 30-seitiges PDF
-(≈ 1 h Audio) in 20–30 Minuten fertig. Das misst S1.
+(≈ 1 h Audio) in 20–30 Minuten fertig. **Gemessen (S1): RTF ≈ 0,83 mit Upstream, also ca. 50 Minuten.**
 
 ### 4.7 Bauen und Installieren ohne Developer-Account
 
