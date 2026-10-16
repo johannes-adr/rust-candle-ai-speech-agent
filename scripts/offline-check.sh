@@ -16,6 +16,7 @@ if sandbox-exec -p '(version 1)(allow default)(deny network*)' /usr/bin/curl -sS
 fi
 echo "ok, gesperrt."
 
+# Braucht mindestens eine eigene deutsche Stimme (vorleser-cli voices).
 echo "Guten Tag, dieser Satz wird ohne Netzwerk vorgelesen." | sandbox-exec -p '(version 1)(allow default)(deny network*)' \
-    "$CLI" read - --work-dir spike-output/phase5/work --voices-dir Resources/Voices --lang de --fresh -o "$OUT"
+    "$CLI" read - --work-dir spike-output/phase5/work --lang de --fresh -o "$OUT"
 echo "Bestanden: $OUT"

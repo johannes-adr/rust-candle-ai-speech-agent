@@ -1,9 +1,7 @@
 // vorleser-cli: dieselbe Pipeline wie die App, ohne Oberfläche (PLAN §5, Phase 1).
 //
-//   vorleser-cli brief.pdf --voice de-helga --style ruhig -o brief.mp3
+//   vorleser-cli brief.pdf --voice own-1234abcd -o brief.mp3
 //   vorleser-cli voices
-//   vorleser-cli design-presets <Ordner> [--lang de] [--voice de-helga] [--style calm]
-//   vorleser-cli adopt-presets <Ordner>
 //   vorleser-cli import-voice <Datei> --lang de --name "Oma" --consent   (Phase 3)
 //   vorleser-cli delete-voice <id>
 //   vorleser-cli models status|install|manifest   (Phase 5: Modellordner)
@@ -20,7 +18,7 @@ struct Vorleser: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "vorleser-cli",
         abstract: "Wandelt PDF oder Text in eine MP3 um (Qwen3-TTS, lokal).",
-        subcommands: [Read.self, Voices.self, DesignPresets.self, AdoptPresets.self, ImportVoice.self, DeleteVoice.self, CheckReading.self, DesignVoice.self, Models.self],
+        subcommands: [Read.self, Voices.self, ImportVoice.self, DeleteVoice.self, CheckReading.self, DesignVoice.self, Models.self],
         defaultSubcommand: Read.self)
 }
 
@@ -32,10 +30,8 @@ struct Read: AsyncParsableCommand {
     @Argument(help: "PDF, Text, Word … oder \"-\" für Text von der Standardeingabe.")
     var input: String
 
-    @Option(help: "Stimmen-ID aus presets.json (Standard: erste Stimme der erkannten Sprache mit Referenz).")
+    @Option(help: "ID einer eigenen Stimme (siehe vorleser-cli voices; Standard: die älteste Stimme der erkannten Sprache).")
     var voice: String?
-    @Option(help: "calm, happy, fairytale, factual (auch ruhig, froh, märchen, sachlich).")
-    var style: String = "calm"
     @Option(help: "Tempo 0,8 … 1,2.")
     var tempo: Double = 1.0
     @Option(help: "Sprache erzwingen (de, pt, en, es, fr, it, ru, zh, ja, ko); sonst erkannt.")
@@ -48,7 +44,7 @@ struct Read: AsyncParsableCommand {
     var title: String?
     @Option(name: .customLong("work-dir"), help: "Projektordner (Standard: Application Support/Vorleser/Projects).")
     var workDir: String?
-    @Option(name: .customLong("voices-dir"), help: "Ordner mit presets.json (Standard: Resources/Voices).")
+    @Option(name: .customLong("voices-dir"), help: "Ordner mit eigenen Stimmen (Standard: Application Support/Vorleser/Voices).")
     var voicesDir: String?
     @Flag(help: "Angefangenes Projekt verwerfen und von vorn beginnen.")
     var fresh = false
@@ -96,24 +92,19 @@ struct Read: AsyncParsableCommand {
             throw CLIError("Sprache nicht erkannt, bitte --lang setzen.")
         }
 
-        let voices = try locateVoices(voicesDir)
-        let styleKey = normalizedStyle(style)
+        let voices = locateVoices(voicesDir)
         let chosen: Voice
         if let voice {
-            guard let v = voices.voice(id: voice, style: styleKey, fallback: true) else {
-                throw CLIError("Stimme \(voice) hat keine Referenz in \(voices.directory.path). Siehe: vorleser-cli voices")
+            guard let v = voices.voice(id: voice) else {
+                throw CLIError("Stimme \(voice) gibt es nicht in \(voices.custom.directory.path). Siehe: vorleser-cli voices")
             }
             if v.language != language { err("Hinweis: Stimme \(v.id) ist \(v.language.rawValue), gelesen wird \(language.rawValue).") }
             chosen = v
-        } else if let v = voices.presets(for: language).lazy.compactMap({ voices.voice(id: $0.id, style: styleKey, fallback: true) }).first {
+        } else if let v = voices.voices(for: language).lazy.compactMap({ voices.voice(id: $0.id) }).first {
             chosen = v
         } else {
-            throw CLIError("Für \(language.rawValue) gibt es noch keine Stimme mit Referenz. Siehe: vorleser-cli voices")
+            throw CLIError("Für \(language.rawValue) gibt es noch keine eigene Stimme. Siehe: vorleser-cli voices, import-voice, design-voice")
         }
-        let usedStyle = voices.availableStyles(voiceID: chosen.id).first {
-            voices.referenceURL(voiceID: chosen.id, style: $0)?.path == chosen.referenceAudio.path
-        }
-        if chosen.kind != .recorded, usedStyle != styleKey { err("Hinweis: Stil \(styleKey) fehlt für \(chosen.id), genommen wird \(usedStyle ?? "?").") }
 
         let store: ProjectStore
         if let workDir {
@@ -125,11 +116,11 @@ struct Read: AsyncParsableCommand {
         let outURL = output.map { URL(fileURLWithPath: $0) }
         let request = SynthesisRequest(
             title: title ?? defaultTitle, source: .document(document, sourceHash: hash, kind: kind),
-            language: language, voice: chosen, style: usedStyle, tempo: tempo, outputURL: outURL,
+            language: language, voice: chosen, style: nil, tempo: tempo, outputURL: outURL,
             pageCount: pageCount, sourceData: sourceData, sourceExtension: sourceExt)
 
         if fresh, let p = await SynthesisJob.existingProject(
-            in: store, sourceHash: hash, language: language, voiceID: chosen.id, style: usedStyle) {
+            in: store, sourceHash: hash, language: language, voiceID: chosen.id, style: nil) {
             try await store.delete(id: p.id)
             err("Altes Projekt \(p.id.uuidString.prefix(8)) verworfen (--fresh).")
         }
@@ -168,7 +159,7 @@ struct Read: AsyncParsableCommand {
         let fp = footprintGB()
         let size = (try? FileManager.default.attributesOfItem(atPath: r.fileURL.path)[.size] as? Int) ?? 0
         print("Fertig: \(r.fileURL.path)")
-        print("  Dauer \(clock(r.durationSeconds)) (\(f(r.durationSeconds, 1)) s), \(f(Double(size) / 1e6, 1)) MB, Sprache \(r.language.rawValue), Stimme \(chosen.id) (\(usedStyle ?? "?"))")
+        print("  Dauer \(clock(r.durationSeconds)) (\(f(r.durationSeconds, 1)) s), \(f(Double(size) / 1e6, 1)) MB, Sprache \(r.language.rawValue), Stimme \(chosen.id)")
         print("  Abschnitte \(r.chunkCount) (in diesem Lauf \(r.chunksSynthesized), fortgesetzt: \(r.resumed ? "ja" : "nein"))")
         print("  Gesamtzeit \(clock(total)) (\(f(total, 1)) s), Rechenzeit Sprache \(f(r.computeSeconds, 1)) s für \(f(r.synthesizedAudioSeconds, 1)) s Audio")
         if r.synthesizedAudioSeconds > 0 {
@@ -200,21 +191,14 @@ struct Read: AsyncParsableCommand {
 }
 
 struct Voices: ParsableCommand {
-    static let configuration = CommandConfiguration(abstract: "Stimmen aus presets.json und welche Referenzen vorhanden sind.")
+    static let configuration = CommandConfiguration(abstract: "Eigene Stimmen (aufgenommen, importiert, beschrieben).")
     @Option(name: .customLong("voices-dir")) var voicesDir: String?
 
     func run() throws {
-        let store = try locateVoices(voicesDir)
-        print("Ordner: \(store.directory.path)")
-        for p in store.allPresets {
-            let have = store.availableStyles(voiceID: p.id)
-            print("\(p.id.padding(toLength: 12, withPad: " ", startingAt: 0)) \(p.name.padding(toLength: 8, withPad: " ", startingAt: 0)) \(p.language.rawValue)  Referenzen: \(have.isEmpty ? "–" : have.joined(separator: ", "))")
-        }
-        if let custom = store.custom {
-            print("Eigene Stimmen (\(custom.directory.path)):")
-            for v in custom.list() {
-                print("\(v.id.padding(toLength: 12, withPad: " ", startingAt: 0)) \(v.name.padding(toLength: 8, withPad: " ", startingAt: 0)) \(v.language.rawValue)  \(v.source), \(String(format: "%.1f", v.durationSeconds)) s")
-            }
+        let custom = locateVoices(voicesDir).custom
+        print("Ordner: \(custom.directory.path)")
+        for v in custom.list() {
+            print("\(v.id.padding(toLength: 12, withPad: " ", startingAt: 0)) \(v.name.padding(toLength: 8, withPad: " ", startingAt: 0)) \(v.language.rawValue)  \(v.source), \(String(format: "%.1f", v.durationSeconds)) s")
         }
     }
 }

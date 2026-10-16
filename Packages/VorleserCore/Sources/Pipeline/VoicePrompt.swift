@@ -34,7 +34,7 @@ public struct VoicePrompt: Sendable, Equatable {
 }
 
 public enum VoicePromptBuilder {
-    /// Satzbau nach den Vorgaben in `presets.json` („The voice of …, with a clear native German
+    /// Satzbau („The voice of …, with a clear native German
     /// accent, speaking clearly.“). Der Wunsch der Nutzerin steht in der Mitte.
     public static func build(_ wish: VoiceWish, translator: (any DescriptionTranslating)?) async -> VoicePrompt {
         let original = wish.description.trimmingCharacters(in: .whitespacesAndNewlines)

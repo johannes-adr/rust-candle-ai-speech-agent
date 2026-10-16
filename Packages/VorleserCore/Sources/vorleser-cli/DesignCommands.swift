@@ -75,7 +75,6 @@ struct DesignVoice: AsyncParsableCommand {
     var storeDir: String?
     @Option(name: .customLong("read-text"), help: "Mit --keep: diesen Text mit der neuen Stimme vorlesen (Base).")
     var readText: String?
-    @Option(name: .customLong("voices-dir")) var voicesDir: String?
     @Option(name: .customLong("read-aloud-dir")) var readAloudDir: String?
 
     func run() async throws {
@@ -85,8 +84,7 @@ struct DesignVoice: AsyncParsableCommand {
             return l
         } ?? reading
         if let keep, !(1...max(count, 1)).contains(keep) { throw ValidationError("--keep muss zwischen 1 und \(count) liegen") }
-        let voices = try locateVoices(voicesDir)
-        let refText = try readAloudText(reading, voices: voices, override: readAloudDir)
+        let refText = try readAloudText(reading, override: readAloudDir)
         let outDir = URL(fileURLWithPath: out, isDirectory: true)
         try FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
 

@@ -1,6 +1,7 @@
 // Kleine Hilfen der Kommandozeile: Ausgabe auf stderr, Zeitformat, Speicherspitze.
 import Darwin
 import Foundation
+import TextPrep
 import VorleserSpeech
 
 func err(_ s: String, terminator: String = "\n") {
@@ -35,25 +36,30 @@ struct CLIError: Error, CustomStringConvertible {
     init(_ d: String) { description = d }
 }
 
-/// Deutsche Kurznamen der Stile, damit `--style ruhig` geht.
-func normalizedStyle(_ s: String) -> String {
-    switch s.lowercased() {
-    case "ruhig": "calm"
-    case "froh", "fröhlich", "froehlich": "happy"
-    case "märchen", "maerchen": "fairytale"
-    case "sachlich": "factual"
-    default: s.lowercased()
-    }
+/// Eigene Stimmen (Standard: Application Support/Vorleser/Voices, oder `--voices-dir`).
+func locateVoices(_ override: String?) -> VoiceStore {
+    override.map { VoiceStore(customDirectory: URL(fileURLWithPath: $0, isDirectory: true)) } ?? VoiceStore()
 }
 
-func locateVoices(_ override: String?) throws -> VoiceStore {
-    if let override {
-        let store = VoiceStore(directory: URL(fileURLWithPath: override, isDirectory: true), customDirectory: RecordedVoiceStore.defaultDirectory)
-        guard !store.allPresets.isEmpty else { throw CLIError("Keine presets.json in \(override)") }
-        return store
+/// Fester Lesetext je Sprache (ca. 10–12 s) aus `Resources/ReadAloud`: `--read-aloud-dir`, sonst vom
+/// Arbeitsordner und Programmpfad aufwärts gesucht.
+func readAloudText(_ language: Language, override: String?) throws -> String {
+    var dirs: [URL] = override.map { [URL(fileURLWithPath: $0, isDirectory: true)] } ?? []
+    if override == nil {
+        var starts = [URL(fileURLWithPath: FileManager.default.currentDirectoryPath)]
+        if let exe = Bundle.main.executableURL { starts.append(exe.deletingLastPathComponent()) }
+        for start in starts {
+            var dir = start
+            for _ in 0..<10 {
+                dirs.append(dir.appending(path: "Resources/ReadAloud", directoryHint: .isDirectory))
+                dir = dir.deletingLastPathComponent()
+            }
+        }
     }
-    guard let store = VoiceStore.locateDefault(), !store.allPresets.isEmpty else {
-        throw CLIError("Resources/Voices/presets.json nicht gefunden (--voices-dir oder VORLESER_VOICES_DIR setzen).")
+    for dir in dirs {
+        if let s = try? String(contentsOf: dir.appending(path: "\(language.rawValue).txt"), encoding: .utf8) {
+            return s.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
     }
-    return store
+    throw CLIError("Lesetext für \(language.rawValue) nicht gefunden (--read-aloud-dir setzen).")
 }

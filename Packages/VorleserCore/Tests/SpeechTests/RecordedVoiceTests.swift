@@ -99,25 +99,17 @@ private func tone(_ seconds: Double = 11, rate: Double = 44_100) -> [Float] {
     #expect(store.voice(id: v.id) == nil)
 }
 
-@Test func voiceStoreResolvesPresetsAndRecordedVoices() throws {
-    var repo = URL(fileURLWithPath: #filePath)
-    for _ in 0..<5 { repo = repo.deletingLastPathComponent() }
+@Test func voiceStoreUsesSavedTranscriptAsReferenceText() throws {
     let custom = tempDir()
     defer { try? FileManager.default.removeItem(at: custom) }
-    let store = VoiceStore(directory: repo.appending(path: "Resources/Voices", directoryHint: .isDirectory), customDirectory: custom)
-    let saved = try #require(store.custom).save(
+    let store = VoiceStore(customDirectory: custom)
+    let saved = try store.custom.save(
         samples: tone(), sampleRate: 44_100, transcript: "Hallo.", name: "Ich", language: .de, consent: true,
         source: "recording", transcriptSource: "reading")
-    // Eingebaute Stimme bleibt wie sie war.
-    #expect(store.voice(id: "de-helga", style: "calm")?.kind == .preset)
-    // Eigene Stimme, egal welcher Stil angefragt wird.
-    let own = try #require(store.voice(id: saved.id, style: "happy", fallback: true))
+    let own = try #require(store.voice(id: saved.id))
     #expect(own.kind == .recorded)
-    #expect(own.referenceText == "Hallo.")
+    #expect(own.referenceText == "Hallo.")  // der gespeicherte Text, nie ein anderer
     #expect(store.recordedVoices(for: .de).map(\.id) == [saved.id])
     #expect(store.recordedVoices(for: .pt).isEmpty)
-    #expect(store.allPresets.count == 20)  // eigene Stimmen sind keine Presets
-    // Ohne custom-Ordner: eigene Stimme unbekannt.
-    let plain = VoiceStore(directory: repo.appending(path: "Resources/Voices", directoryHint: .isDirectory))
-    #expect(plain.voice(id: saved.id, style: nil) == nil)
+    #expect(store.voice(id: "unbekannt") == nil)
 }

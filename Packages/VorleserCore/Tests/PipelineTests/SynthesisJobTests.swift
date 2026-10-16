@@ -23,7 +23,7 @@ private func makeEnv() -> Env {
 }
 
 private let voice = Voice(
-    id: "de-test", name: "Testa", language: .de, kind: .preset,
+    id: "own-test", name: "Testa", language: .de, kind: .recorded,
     referenceAudio: URL(fileURLWithPath: "/dev/null"), referenceText: "Hallo.")
 
 /// n Absätze mit je ca. 230 Zeichen → n Abschnitte.

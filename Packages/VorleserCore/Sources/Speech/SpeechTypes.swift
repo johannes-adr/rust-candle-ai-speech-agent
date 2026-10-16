@@ -31,7 +31,13 @@ extension ModelRef {
 
 /// Art der Stimme (PLAN §4.2).
 public enum VoiceKind: String, Sendable, Codable {
-    case preset, designed, recorded
+    case designed, recorded
+
+    /// Alte Daten mit `"preset"` (fertige Stimmen gibt es nicht mehr) gelten als aufgenommen.
+    public init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = VoiceKind(rawValue: raw) ?? .recorded
+    }
 }
 
 /// Eine Stimme = Referenzaufnahme plus deren Text.

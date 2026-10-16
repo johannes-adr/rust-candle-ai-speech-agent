@@ -47,13 +47,13 @@ private func tone(_ seconds: Double = 2, rate: Double = 24_000) -> [Float] {
     let r = try custom.save(
         samples: tone(), sampleRate: 24_000, transcript: "x", name: "R", language: .de, consent: true,
         source: "recording", transcriptSource: "reading")
-    let store = VoiceStore(directory: dir, customDirectory: dir)
+    let store = VoiceStore(customDirectory: dir)
     #expect(store.designedVoices(for: .de).map(\.id) == [d.id])
     #expect(store.recordedVoices(for: .de).map(\.id) == [r.id], "Aufnahmen-Reihe zeigt keine beschriebenen Stimmen")
     #expect(!custom.isDesigned(id: r.id))
     // Die Engine bekommt beide über dieselbe ID-Auflösung.
-    #expect(store.voice(id: d.id, style: nil)?.kind == .designed)
-    #expect(store.voice(id: r.id, style: "calm")?.kind == .recorded)
+    #expect(store.voice(id: d.id)?.kind == .designed)
+    #expect(store.voice(id: r.id)?.kind == .recorded)
 }
 
 @Test func oldRecordedMetadataWithoutDesignFieldsStillLoads() throws {
