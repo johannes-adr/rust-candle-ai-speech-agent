@@ -12,3 +12,6 @@ DerivedData/
 /models/
 /out/
 /spike-output/
+
+# Worktrees der Claude-Agenten
+/.claude/worktrees/
