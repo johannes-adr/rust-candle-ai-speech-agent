@@ -24,6 +24,9 @@ def texts(entry, lang):
 for path in sys.argv[1:]:
     cat = json.load(open(path))
     for key, entry in cat["strings"].items():
+        # Nur Platzhalter/Satzzeichen (z. B. "%@ · %@", von Xcode selbst angelegt): nichts zu übersetzen.
+        if entry.get("shouldTranslate") is False or not re.search(r"[A-Za-z]", re.sub(r"%(?:lld|@|d|%)", "", key)):
+            continue
         per = {l: texts(entry, l) for l in LANGS}
         for l in LANGS:
             if not per[l] or any(not t.strip() for t in per[l]):
