@@ -139,6 +139,7 @@ vorleser-cli import-voice aufnahme.m4a --lang de --name "Oma" --consent [--text 
 vorleser-cli voices                      # listet auch die eigenen Stimmen
 vorleser-cli read brief.pdf --voice own-1a2b3c4d
 vorleser-cli delete-voice own-1a2b3c4d
+vorleser-cli check-reading ausgabe.mp3 --lang de --text "…"   # Pegel, NaN, Rück-Erkennung, WER/CER
 ```
 
 ## Ablauf in der App (PLAN §3)
@@ -183,3 +184,31 @@ Auf jedem Bildschirm gibt es „Zurück“ (Aufnahme verwerfen, Zustimmung zurü
 - Eine eigene Stimme wird nur für ihre Aufnahmesprache angeboten (Karten je Sprache). Sprachübergreifendes
   Klonen geht in der Engine, hat aber Akzent (PLAN §2.1) und ist in der Oberfläche nicht vorgesehen.
 - Hörprobe der geklonten Stimme: siehe unten (E2E).
+
+## E2E-Messung (16.10.2026, Release-CLI, Base 4-bit)
+
+„Aufnahme“ = die S1-Referenz `spike-output/S1/refs/ref-de.wav` (9,7 s, von VoiceDesign erzeugt, kein Mensch;
+das Mikrofon ist damit nicht abgedeckt):
+
+```bash
+export VORLESER_CUSTOM_VOICES_DIR=$PWD/spike-output/phase3/voices
+vorleser-cli import-voice spike-output/S1/refs/ref-de.wav --lang de --name "E2E Testlauf" --consent
+vorleser-cli read - --voice own-20daf766 --lang de -o spike-output/phase3/e2e-eigene-stimme-de.mp3 --fresh < text.txt
+vorleser-cli check-reading <mp3> --lang de --text "<Text>"     # Pegel, NaN, Rück-Erkennung, WER
+```
+
+| Schritt | Ergebnis |
+| --- | --- |
+| Import | SpeechTranscriber `de-DE` war installiert und erkannte den Text **ohne** `--text`: „Guten Tag, ich bin Ihre Vorleserin. Ich lese Ihnen heute gerne einen Brief oder eine Geschichte vor. Ganz in Ruhe.“ (gegen `ref-de.txt`: nur „gern/gerne“ und Satzzeichen anders). Referenz 9,2 s bei 24 kHz, Pegel −14,0 dBFS, Rauschen −74 dBFS, keine Hinweise |
+| Vorlesen kurz | 1 Abschnitt (ca. 230 Zeichen), 13,7 s Audio, 0 Wiederholungen, 0 Verdachtsfälle, NaN/Inf: 0, RTF 2,06 |
+| Vorlesen lang | 3 Abschnitte, 35,6 s Audio, 0 Wiederholungen, 0 Verdachtsfälle, NaN/Inf: 0, RTF Sprache 1,99, Spitzenspeicher 5,1 GB (am Ende 2,6 GB) |
+| Rück-Erkennung (SpeechTranscriber) | kurz: **WER 2,5 %** („gern“ → „gerne“), lang: **WER 0,0 %** |
+
+**RTF**: Die Zahlen sind **nicht vergleichbar** mit S1/Phase 1 (0,82–0,95): Während der Messung lief auf dem Mac
+parallel viel anderes (Lastmittel 9–16; andere Agenten bauen und rechnen). Der Weg ist derselbe wie bei fertigen
+Stimmen (`prepare` einmal, dann Abschnitte), die eigene Stimme macht ihn nicht langsamer. Bei ruhigem Mac
+wiederholen, bevor jemand die Zahl zitiert.
+
+Hörproben (Ordner `spike-output/phase3/`, von der Versionsverwaltung ignoriert): `00-referenz-ref-de.wav` (die
+„Aufnahme“), `e2e-eigene-stimme-de.mp3`, `e2e-eigene-stimme-de-lang.mp3`. Frage: Klingt die MP3 nach derselben
+Sprecherin wie die Referenz, und stört etwas (Tempo, Betonung, Rauschen)?

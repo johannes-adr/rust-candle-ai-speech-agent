@@ -91,3 +91,34 @@ struct DeleteVoice: ParsableCommand {
         print("Gelöscht: \(id)")
     }
 }
+
+/// Prüft eine Sprachausgabe objektiv: Pegel/NaN und Spracherkennung zurück in Text (WER/CER).
+struct CheckReading: AsyncParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "check-reading",
+        abstract: "Audiodatei erkennen lassen und mit dem erwarteten Text vergleichen (WER/CER, Pegel, NaN).")
+
+    @Argument(help: "Audiodatei (mp3, wav, caf, m4a).")
+    var file: String
+    @Option(help: "Sprache (de, pt, …).")
+    var lang: String
+    @Option(help: "Erwarteter Text.")
+    var text: String
+
+    func run() async throws {
+        guard let language = Language(rawValue: lang) else { throw ValidationError("Unbekannte Sprache \(lang)") }
+        let url = URL(fileURLWithPath: file)
+        let (samples, rate) = try AudioFiles.readMono(url: url)
+        let level = LevelMeter.measure(samples)
+        let nonFinite = samples.reduce(0) { $0 + ($1.isFinite ? 0 : 1) }
+        print("Dauer \(f(Double(samples.count) / rate, 1)) s bei \(Int(rate)) Hz, RMS \(f(level.rmsDBFS, 1)) dBFS, Spitze \(f(level.peakDBFS, 1)) dBFS, NaN/Inf: \(nonFinite)")
+        switch await SystemTranscriber().transcribe(fileURL: url, language: language) {
+        case .unavailable(let why):
+            print("Spracherkennung nicht möglich: \(why.rawValue)")
+        case .text(let heard, let engine):
+            let rate = TranscriptScoring.errorRate(reference: text, hypothesis: heard, language: language)
+            print("Erkannt (\(engine)): \(heard)")
+            print("\(language.isCJK ? "CER" : "WER") \(f(rate * 100, 1)) %")
+        }
+    }
+}
