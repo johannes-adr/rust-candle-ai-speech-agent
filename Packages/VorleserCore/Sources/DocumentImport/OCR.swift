@@ -58,18 +58,41 @@ enum OCR {
         }
         let handler = VNImageRequestHandler(cgImage: image, options: [:])
         try handler.perform([request])
-        var lines: [PageLine] = []
+        // Rohdaten: Text, Zeilenhöhe/-breite aus den gedrehten Ecken, linker Mittelpunkt, Winkel.
+        // (Das achsenparallele `boundingBox` ist bei schief fotografierten Seiten zu hoch.)
+        struct Raw { var text: String; var left: CGPoint; var w: CGFloat; var h: CGFloat; var angle: CGFloat }
+        var raws: [Raw] = []
         for obs in request.results ?? [] {
             guard let cand = obs.topCandidates(1).first, cand.confidence >= minConfidence else { continue }
             let text = TextHelpers.normalize(cand.string)
             guard !text.isEmpty else { continue }
-            let bb = obs.boundingBox  // normalisiert, Ursprung unten links
-            let rect = CGRect(
-                x: bb.minX * pageSize.width, y: bb.minY * pageSize.height,
-                width: bb.width * pageSize.width, height: bb.height * pageSize.height
-            )
+            func pt(_ p: CGPoint) -> CGPoint { CGPoint(x: p.x * pageSize.width, y: p.y * pageSize.height) }
+            if let quad = try? cand.boundingBox(for: cand.string.startIndex..<cand.string.endIndex) {
+                let tl = pt(quad.topLeft), tr = pt(quad.topRight), bl = pt(quad.bottomLeft)
+                raws.append(Raw(
+                    text: text, left: CGPoint(x: (tl.x + bl.x) / 2, y: (tl.y + bl.y) / 2),
+                    w: hypot(tr.x - tl.x, tr.y - tl.y), h: hypot(tl.x - bl.x, tl.y - bl.y),
+                    angle: atan2(tr.y - tl.y, tr.x - tl.x)
+                ))
+            } else {
+                let bb = obs.boundingBox
+                raws.append(Raw(
+                    text: text, left: CGPoint(x: bb.minX * pageSize.width, y: bb.midY * pageSize.height),
+                    w: bb.width * pageSize.width, h: bb.height * pageSize.height, angle: 0
+                ))
+            }
+        }
+        // Schiefstand der Seite = Mittelwert der Zeilenwinkel; Zeilen werden zurückgedreht.
+        let angles = raws.filter { $0.w > pageSize.width * 0.15 }.map(\.angle).sorted()
+        let skew = angles.isEmpty ? 0 : angles[angles.count / 2]
+        let cs = cos(skew), sn = sin(skew)
+        var lines: [PageLine] = []
+        for r in raws {
+            let x = r.left.x * cs + r.left.y * sn
+            let y = -r.left.x * sn + r.left.y * cs
+            let rect = CGRect(x: x, y: y - r.h / 2, width: r.w, height: r.h)
             // Zeilenhöhe ≈ 1,2–1,3 Schriftgrößen (Ober- und Unterlängen).
-            lines.append(PageLine(text, rect: rect, fontSize: rect.height / 1.25, isBold: false, page: pageIndex))
+            lines.append(PageLine(r.text, rect: rect, fontSize: r.h / 1.25, isBold: false, page: pageIndex))
         }
         return lines
     }

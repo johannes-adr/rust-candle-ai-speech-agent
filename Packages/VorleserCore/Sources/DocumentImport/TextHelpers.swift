@@ -18,6 +18,15 @@ enum TextHelpers {
         return s.trimmingCharacters(in: .whitespaces)
     }
 
+    private static let footnoteMarker = try! NSRegularExpression(
+        pattern: #"(?<=\p{L}[.,;:!?”)»])\d{1,3}(?=\s|$)|[\u00B9\u00B2\u00B3\u2070-\u2079]+"#
+    )
+
+    /// Entfernt Fußnotenziffern, die an Satzzeichen oder als Hochzahl am Wort kleben („…verschwinden.1“).
+    static func stripFootnoteMarkers(_ s: String) -> String {
+        footnoteMarker.stringByReplacingMatches(in: s, range: NSRange(s.startIndex..., in: s), withTemplate: "")
+    }
+
     static func endsWithTerminalPunctuation(_ s: String) -> Bool {
         guard let c = s.trimmingCharacters(in: .whitespaces).last else { return false }
         return terminalPunctuation.contains(c)
