@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import TextPrep
 import PDFKit
 
 public enum DocumentImportError: Error, Sendable, Equatable {
@@ -26,6 +27,9 @@ public struct DocumentImporter: Sendable {
     public var minLettersPerTextPage = 25
     /// Anteil der Buchstaben an den Nicht-Leerzeichen, darunter ist die Textebene Müll (z. B. kaputte Schriftkodierung).
     public var minLetterRatio = 0.5
+    /// Texterkennung: `RecognizeDocumentsRequest` (Absätze) oder nur `VNRecognizeTextRequest` (für Vergleiche).
+    var ocrEngine: OCR.Engine = .documents
+    public mutating func useLegacyOCR() { ocrEngine = .text }
 
     public init(cleaner: PDFCleaner = PDFCleaner()) {
         self.cleaner = cleaner
@@ -51,9 +55,9 @@ public struct DocumentImporter: Sendable {
         let ext = url.pathExtension.lowercased()
         switch ext {
         case "pdf":
-            return try importPDF(at: url, languageHint: languageHint)
+            return try await importPDF(at: url, languageHint: languageHint)
         case "png", "jpg", "jpeg", "heic", "tif", "tiff":
-            return try importImage(at: url, languageHint: languageHint)
+            return try await importImage(at: url, languageHint: languageHint)
         case "txt", "text", "md":
             let data = try readData(url)
             let text = try Self.decodeText(data)
@@ -69,7 +73,7 @@ public struct DocumentImporter: Sendable {
 
     // MARK: PDF
 
-    private func importPDF(at url: URL, languageHint: String?) throws -> ImportResult {
+    private func importPDF(at url: URL, languageHint: String?) async throws -> ImportResult {
         guard let pdf = PDFDocument(url: url) else { throw DocumentImportError.unreadable(url.lastPathComponent) }
         if pdf.isLocked, !pdf.unlock(withPassword: "") { throw DocumentImportError.passwordProtected }
         var pages: [PageLayout] = []
@@ -92,12 +96,12 @@ public struct DocumentImporter: Sendable {
             try Task.checkCancellation()
             guard let image = OCR.render(page: page) else { continue }
             let size = page.bounds(for: .cropBox).size
-            let lines = try OCR.recognize(image: image, pageSize: size, pageIndex: i, language: language)
+            let lines = try await OCR.recognize(image: image, pageSize: size, pageIndex: i, language: language, engine: ocrEngine)
             if language == nil {
                 language = TextHelpers.detectLanguage(lines.map(\.text).joined(separator: " "))
                 if language != nil, !OCR.visionLanguages(for: language).isEmpty {
                     // Zweiter Durchgang mit bekannter Sprache (bessere Sprachkorrektur).
-                    let again = try OCR.recognize(image: image, pageSize: size, pageIndex: i, language: language)
+                    let again = try await OCR.recognize(image: image, pageSize: size, pageIndex: i, language: language, engine: ocrEngine)
                     pages.append(PageLayout(index: i, size: size, lines: again, fromOCR: true))
                     ocrIndices.append(i)
                     continue
@@ -122,13 +126,13 @@ public struct DocumentImporter: Sendable {
 
     // MARK: Bilder (Handy-Foto, Scan als Bilddatei)
 
-    private func importImage(at url: URL, languageHint: String?) throws -> ImportResult {
+    private func importImage(at url: URL, languageHint: String?) async throws -> ImportResult {
         guard let image = OCR.loadImage(at: url) else { throw DocumentImportError.unreadable(url.lastPathComponent) }
         let size = CGSize(width: image.width, height: image.height)
-        var lines = try OCR.recognize(image: image, pageSize: size, pageIndex: 0, language: languageHint)
+        var lines = try await OCR.recognize(image: image, pageSize: size, pageIndex: 0, language: languageHint, engine: ocrEngine)
         var language = languageHint ?? TextHelpers.detectLanguage(lines.map(\.text).joined(separator: " "))
         if languageHint == nil, language != nil, !OCR.visionLanguages(for: language).isEmpty {
-            lines = try OCR.recognize(image: image, pageSize: size, pageIndex: 0, language: language)
+            lines = try await OCR.recognize(image: image, pageSize: size, pageIndex: 0, language: language, engine: ocrEngine)
         }
         let (doc, report) = cleaner.clean(pages: [PageLayout(index: 0, size: size, lines: lines, fromOCR: true)], language: language)
         language = report.language

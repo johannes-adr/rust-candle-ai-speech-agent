@@ -1,24 +1,27 @@
 // Spike S4: liest alle PDFs (und Bilder/Word-Dateien) eines Ordners und schreibt je Datei
 // die erkannten Blöcke als .txt nach spike-output/S4/ – zum Gegenlesen mit dem Original.
 //
-// Aufruf:  swift run spike-s4 <ordner> [--out <ausgabeordner>] [--lang de]
+// Aufruf:  swift run spike-s4 <ordner> [--out <ausgabeordner>] [--lang de] [--ocr-alt]
 import DocumentImport
 import Foundation
+import TextPrep
 
 var args = Array(CommandLine.arguments.dropFirst())
 var outDir = "spike-output/S4"
 var lang: String?
+var legacyOCR = false
 var folder: String?
 while !args.isEmpty {
     let a = args.removeFirst()
     switch a {
     case "--out": outDir = args.isEmpty ? outDir : args.removeFirst()
+    case "--ocr-alt": legacyOCR = true  // altes VNRecognizeTextRequest statt RecognizeDocumentsRequest
     case "--lang": lang = args.isEmpty ? nil : args.removeFirst()
     default: folder = a
     }
 }
 guard let folder else {
-    FileHandle.standardError.write(Data("Aufruf: spike-s4 <ordner> [--out <ordner>] [--lang de]\n".utf8))
+    FileHandle.standardError.write(Data("Aufruf: spike-s4 <ordner> [--out <ordner>] [--lang de] [--ocr-alt]\n".utf8))
     exit(2)
 }
 
@@ -31,7 +34,8 @@ let files = (try fm.contentsOfDirectory(at: inURL, includingPropertiesForKeys: n
     .filter { DocumentImporter.supportedExtensions.contains($0.pathExtension.lowercased()) }
     .sorted { $0.lastPathComponent < $1.lastPathComponent }
 
-let importer = DocumentImporter()
+var importer = DocumentImporter()
+if legacyOCR { importer.useLegacyOCR() }
 var summary = "Datei | Seiten | OCR-Seiten | Sprache | Überschriften | Absätze | Zeichen | Sekunden\n"
 for file in files {
     let start = Date()

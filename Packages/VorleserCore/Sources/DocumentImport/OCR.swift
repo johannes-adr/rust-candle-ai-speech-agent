@@ -44,9 +44,59 @@ enum OCR {
         return ctx.makeImage()
     }
 
+    enum Engine: Sendable { case documents, text }
+
+    /// Rohzeile aus der Texterkennung: Zeilenhöhe/-breite aus den gedrehten Ecken, linker Mittelpunkt, Winkel.
+    /// (Das achsenparallele `boundingBox` ist bei schief fotografierten Seiten zu hoch.)
+    struct Raw { var text: String; var left: CGPoint; var w: CGFloat; var h: CGFloat; var angle: CGFloat; var paragraph: Int }
+
     /// Liest ein Bild und liefert Zeilen in „Seitenkoordinaten“ der Größe `pageSize`.
+    /// Hauptweg ist `RecognizeDocumentsRequest` (macOS 26, liefert Absätze); fällt auf
+    /// `VNRecognizeTextRequest` zurück, wenn er fehlschlägt oder nichts findet.
     /// - Parameter language: Kürzel des Dokuments, falls bekannt. Sonst automatische Erkennung.
-    static func recognize(image: CGImage, pageSize: CGSize, pageIndex: Int, language: String?) throws -> [PageLine] {
+    static func recognize(image: CGImage, pageSize: CGSize, pageIndex: Int, language: String?, engine: Engine = .documents) async throws -> [PageLine] {
+        if engine == .documents, let raws = try? await recognizeDocumentRaws(image: image, pageSize: pageSize, language: language), !raws.isEmpty {
+            return finish(raws, pageSize: pageSize, pageIndex: pageIndex)
+        }
+        return finish(try recognizeTextRaws(image: image, pageSize: pageSize, language: language), pageSize: pageSize, pageIndex: pageIndex)
+    }
+
+    static func recognizeDocumentRaws(image: CGImage, pageSize: CGSize, language: String?) async throws -> [Raw] {
+        var request = RecognizeDocumentsRequest()
+        request.barcodeDetectionOptions.enabled = false
+        request.textRecognitionOptions.useLanguageCorrection = true
+        let wanted = documentLanguages(for: language, supported: request.supportedRecognitionLanguages)
+        if wanted.isEmpty {
+            request.textRecognitionOptions.automaticallyDetectLanguage = true
+        } else {
+            request.textRecognitionOptions.recognitionLanguages = wanted
+            request.textRecognitionOptions.automaticallyDetectLanguage = false
+        }
+        let results = try await request.perform(on: image)
+        guard let document = results.first?.document else { return [] }
+        func pt(_ p: NormalizedPoint) -> CGPoint { CGPoint(x: p.x * pageSize.width, y: p.y * pageSize.height) }
+        var raws: [Raw] = []
+        for (pi, para) in document.paragraphs.enumerated() {
+            for line in para.lines where line.confidence >= minConfidence {
+                let text = TextHelpers.normalize(line.transcript)
+                guard !text.isEmpty else { continue }
+                let tl = pt(line.topLeft), tr = pt(line.topRight), bl = pt(line.bottomLeft)
+                raws.append(Raw(
+                    text: text, left: CGPoint(x: (tl.x + bl.x) / 2, y: (tl.y + bl.y) / 2),
+                    w: hypot(tr.x - tl.x, tr.y - tl.y), h: hypot(tl.x - bl.x, tl.y - bl.y),
+                    angle: atan2(tr.y - tl.y, tr.x - tl.x), paragraph: pi
+                ))
+            }
+        }
+        return raws
+    }
+
+    static func documentLanguages(for code: String?, supported: [Locale.Language]) -> [Locale.Language] {
+        guard let code else { return [] }
+        return supported.filter { ($0.languageCode?.identifier ?? "") == (code == "zh" ? "zh" : code) }
+    }
+
+    static func recognizeTextRaws(image: CGImage, pageSize: CGSize, language: String?) throws -> [Raw] {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = true
@@ -58,9 +108,6 @@ enum OCR {
         }
         let handler = VNImageRequestHandler(cgImage: image, options: [:])
         try handler.perform([request])
-        // Rohdaten: Text, Zeilenhöhe/-breite aus den gedrehten Ecken, linker Mittelpunkt, Winkel.
-        // (Das achsenparallele `boundingBox` ist bei schief fotografierten Seiten zu hoch.)
-        struct Raw { var text: String; var left: CGPoint; var w: CGFloat; var h: CGFloat; var angle: CGFloat }
         var raws: [Raw] = []
         for obs in request.results ?? [] {
             guard let cand = obs.topCandidates(1).first, cand.confidence >= minConfidence else { continue }
@@ -72,17 +119,21 @@ enum OCR {
                 raws.append(Raw(
                     text: text, left: CGPoint(x: (tl.x + bl.x) / 2, y: (tl.y + bl.y) / 2),
                     w: hypot(tr.x - tl.x, tr.y - tl.y), h: hypot(tl.x - bl.x, tl.y - bl.y),
-                    angle: atan2(tr.y - tl.y, tr.x - tl.x)
+                    angle: atan2(tr.y - tl.y, tr.x - tl.x), paragraph: -1
                 ))
             } else {
                 let bb = obs.boundingBox
                 raws.append(Raw(
                     text: text, left: CGPoint(x: bb.minX * pageSize.width, y: bb.midY * pageSize.height),
-                    w: bb.width * pageSize.width, h: bb.height * pageSize.height, angle: 0
+                    w: bb.width * pageSize.width, h: bb.height * pageSize.height, angle: 0, paragraph: -1
                 ))
             }
         }
-        // Schiefstand der Seite = Mittelwert der Zeilenwinkel; Zeilen werden zurückgedreht.
+        return raws
+    }
+
+    /// Schiefstand der Seite = Median der Zeilenwinkel; Zeilen werden zurückgedreht.
+    static func finish(_ raws: [Raw], pageSize: CGSize, pageIndex: Int) -> [PageLine] {
         let angles = raws.filter { $0.w > pageSize.width * 0.15 }.map(\.angle).sorted()
         let skew = angles.isEmpty ? 0 : angles[angles.count / 2]
         let cs = cos(skew), sn = sin(skew)
@@ -92,7 +143,9 @@ enum OCR {
             let y = -r.left.x * sn + r.left.y * cs
             let rect = CGRect(x: x, y: y - r.h / 2, width: r.w, height: r.h)
             // Zeilenhöhe ≈ 1,2–1,3 Schriftgrößen (Ober- und Unterlängen).
-            lines.append(PageLine(r.text, rect: rect, fontSize: r.h / 1.25, isBold: false, page: pageIndex))
+            var l = PageLine(r.text, rect: rect, fontSize: r.h / 1.25, isBold: false, page: pageIndex)
+            l.paragraph = r.paragraph
+            lines.append(l)
         }
         return lines
     }

@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import TextPrep
 
 /// Schwellen der PDF-Bereinigung (PLAN.md §4.3 Schritt 3). Begründung: docs/spikes/S4-pdfs.md.
 public struct CleanerOptions: Sendable {
@@ -474,6 +475,8 @@ extension PDFCleaner {
             let prevEnds = TextHelpers.endsWithTerminalPunctuation(p.text)
             let movedAway = c.page != p.page || c.rect.midY > p.rect.midY + 1  // Seiten- oder Spaltenwechsel
             if movedAway { return prevEnds }
+            // Absätze der Texterkennung (RecognizeDocumentsRequest) übernehmen.
+            if p.paragraph >= 0, c.paragraph >= 0 { return p.paragraph != c.paragraph }
             let sizeTolerance = ocrPages.contains(c.page) ? c.fontSize * 0.5 : 1.0  // OCR: Höhe schwankt je nach Buchstaben
             if abs(p.fontSize - c.fontSize) > sizeTolerance { return true }
             let step = p.rect.midY - c.rect.midY  // Mitte statt Unterkante: unempfindlich gegen Höhenschwankung (OCR)

@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import TextPrep
 import Testing
 @testable import DocumentImport
 
@@ -97,6 +98,7 @@ import Testing
         #expect(all.contains("Mietvertrag"))
         #expect(all.contains("Vermieter"))
         #expect(all.contains("Kaution"))
+        #expect(r.document.blocks.count == 5, "Titel + 4 Absätze dank RecognizeDocumentsRequest")
     }
 
     @Test func nichtLesbarOderLeer() async throws {

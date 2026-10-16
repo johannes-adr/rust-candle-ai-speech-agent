@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import TextPrep
 import Testing
 @testable import DocumentImport
 

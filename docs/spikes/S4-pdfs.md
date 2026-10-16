@@ -29,14 +29,24 @@ OCR-Schwellen brauchen wir?
   (zusammen ca. 430 KB, weil Schriften eingebettet sind und die zwei Bilddokumente JPEG enthalten).
 - **Auswertung:** `swift run spike-s4 <ordner>` (siehe unten).
 
-### Abweichung vom Plan: Vision
+### Vision: `RecognizeDocumentsRequest` ist Hauptweg
 
-Die Umgebung (Xcode 16.3, SDK 15.4) kennt `RecognizeDocumentsRequest` (macOS 26) zur Compile-Zeit
-**nicht**. Es wird deshalb durchgehend `VNRecognizeTextRequest` benutzt (accurate, Sprachkorrektur an,
-`recognitionLanguages` aus der erkannten Dokumentsprache, sonst automatische Erkennung). Aus den OCR-
-Zeilen baut dieselbe Bereinigung wie bei PDF-Text die Absätze. Sobald mit macOS-26-SDK gebaut wird,
-kann `RecognizeDocumentsRequest` als bessere Absatzquelle dazukommen – dann den Spike mit echten
-Scans wiederholen und vergleichen.
+Zuerst lief der Spike mit Xcode 16.3 / SDK 15.4, wo `RecognizeDocumentsRequest` (macOS 26) nicht
+verfügbar war; dort war `VNRecognizeTextRequest` der einzige Weg. Mit Xcode 27.0 (Swift 6.4, SDK 27) und
+Deployment-Target `.macOS(.v26)` (swift-tools-version 6.2) ist `RecognizeDocumentsRequest` jetzt
+**Hauptweg** (`document.paragraphs` → Zeilen mit Absatz-Kennung, die die Bereinigung übernimmt).
+`VNRecognizeTextRequest` bleibt Fallback (Fehler oder leeres Ergebnis) und per `spike-s4 --ocr-alt`
+für Vergleiche abrufbar. Schiefstand-Korrektur und Seitenränder-Bereinigung laufen für beide Wege gleich.
+
+Vergleich auf den OCR-Fixtures (Debug-Build, Zeit je Seite inkl. Rendern):
+
+| Fixture | alt (`VNRecognizeTextRequest` + eigene Absatzregeln) | neu (`RecognizeDocumentsRequest`) |
+| --- | --- | --- |
+| `scan.pdf` | 4 Absätze + Titel, richtig; 0,5 s | 4 Absätze + Titel, richtig; 0,5 s (am Ende ein verirrtes „(“) |
+| `foto.jpg` (2,5° schief) | 3 Absätze: zwei verschmolzen; 0,7 s | **4 Absätze, richtig**; 0,6 s; ein Lesefehler („Herm“ statt „Herrn“) |
+
+Fazit: gleiche Geschwindigkeit, Absätze beim schiefen Foto deutlich besser (bisher die größte Lücke),
+Texttreue vergleichbar (je ein kleiner Fehler pro Verfahren möglich). Mit echten Handy-Fotos prüfen.
 
 ## Was aus den Messungen gelernt wurde (Bauch-Entscheidungen, die sich als falsch erwiesen)
 
@@ -102,8 +112,8 @@ Tests: `swift test` – 34 Tests grün (Zeilenmodell, Fixtures, Kodierungen, Dat
 - Der gewählte Weg trägt: PDFKit-Text + Zeilenmodell + eigene Bereinigung liefert auf den
   synthetischen Dokumenten saubere, vorlesbare Absätze; Scans und schiefe Fotos laufen durch Vision.
 - Die Plan-Annahme „Spalten über die x-Position der Zeilen“ war zu naiv (PDFKit-Zeilen laufen über
-  Spalten); jetzt wird nach Wortlücken geteilt. **PLAN.md §2.4/§4.3 ist insoweit zu ergänzen**
-  (Zeilen in Stücke teilen; `characterBounds` nicht verwenden).
+  Spalten); jetzt wird nach Wortlücken geteilt. **PLAN.md §2.4/§4.3 ist angepasst**
+  (Zeilen in Stücke teilen; `characterBounds` nicht verwenden; 40-%-Schwelle).
 - Der Kopf/Fuß-Schwellwert wird von 50 % auf 40 % gesenkt (Bücher mit wechselndem Kolumnentitel).
 - Alles Weitere hängt an **echten** Dokumenten. Synthetische PDFs sind sauberer als echte (keine
   kaputten Schriftkodierungen, keine Zierlinien, keine Fußzeilen mit drei Spalten, kein Fließtext
