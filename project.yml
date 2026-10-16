@@ -51,8 +51,10 @@ targets:
         product: AudioOut
       - package: VorleserCore
         product: Projects
-      # Platzhalter: sobald die Pipeline im Package steht, kommt hier `product: Speech`
-      # dazu, und PreviewAudiobookService wird durch die echte Umsetzung ersetzt.
+      - package: VorleserCore
+        product: Speech
+      - package: VorleserCore
+        product: Pipeline
     info:
       path: App/Info.plist
       properties:

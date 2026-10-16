@@ -1,6 +1,6 @@
 // Schnittstelle zwischen Oberfläche und Hörbuch-Erzeugung.
-// Die App kennt nur dieses Protokoll. Heute steht dahinter PreviewAudiobookService (Attrappe);
-// sobald die Pipeline im Package steht, kommt eine echte Umsetzung mit derselben Schnittstelle.
+// Die App kennt nur dieses Protokoll. Dahinter steht LiveAudiobookService (Package `Pipeline`);
+// PreviewAudiobookService ist die Attrappe für Entwicklung (Debug, VORLESER_PREVIEW=1).
 import Foundation
 import TextPrep
 
@@ -44,6 +44,8 @@ enum AudiobookEvent: Sendable, Equatable {
     /// Text wird vorbereitet (noch kein Fortschritt messbar).
     case preparing
     case progress(AudiobookProgress)
+    /// Ein Abschnitt ist fertig und liegt als Audiodatei bereit (für „sofort vorlesen“).
+    case chunkReady(fileURL: URL, pauseAfterSeconds: Double)
     /// Die MP3 wird geschrieben.
     case finishing
     case finished(AudiobookResult)

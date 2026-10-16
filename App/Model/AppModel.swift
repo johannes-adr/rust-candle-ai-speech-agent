@@ -4,6 +4,7 @@ import AppKit
 import DocumentImport
 import Foundation
 import Observation
+import Pipeline
 import Projects
 import TextPrep
 
@@ -47,6 +48,20 @@ struct Draft {
     var voiceID: String?
     var style: VoiceStyle = .calm
     var tempo: Tempo = .normal
+
+    /// Geschätzte Länge des fertigen Hörbuchs in Sekunden (Zeichen ÷ Sprechrate ÷ Tempo).
+    var estimatedSeconds: Double {
+        let chars = document.blocks.reduce(0) { n, b in
+            switch b {
+            case .heading(_, let t): n + t.count
+            case .paragraph(let p): n + p.count
+            }
+        }
+        return Double(chars) / SpeechRate.charsPerSecond(for: language) / tempo.factor
+    }
+
+    /// Kurzer Text (unter ca. einer Minute): Wiedergabe beginnt, sobald der erste Abschnitt fertig ist.
+    var isShort: Bool { estimatedSeconds < AppModel.instantLimitSeconds }
 }
 
 @MainActor
@@ -67,9 +82,12 @@ final class AppModel {
     var progress = AudiobookProgress(fraction: 0)
     var result: AudiobookResult?
     var sampleMessage: String?
+    /// Läuft „sofort vorlesen“ (kurzer Text)? Dann zeigt Schritt ③ einen Hinweis.
+    var instantPlayback = false
 
     let settings: AppSettings
     let player = PlayerModel()
+    let instant = InstantPlayer()
     let library: VoiceLibrary
     private(set) var store: ProjectStore
     private(set) var service: any AudiobookService
@@ -83,9 +101,7 @@ final class AppModel {
         settings: AppSettings = AppSettings(),
         library: VoiceLibrary = VoiceLibrary(),
         storeRoot: URL? = nil,
-        makeService: @escaping @MainActor (ProjectStore, VoiceLibrary) -> any AudiobookService = { store, lib in
-            PreviewAudiobookService(store: store, library: lib, simulatedSeconds: AppModel.previewSeconds)
-        }
+        makeService: @escaping @MainActor (ProjectStore, VoiceLibrary) -> any AudiobookService = AppModel.defaultService
     ) {
         self.settings = settings
         self.library = library
@@ -95,6 +111,19 @@ final class AppModel {
         self.store = store
         self.service = makeService(store, library)
         Task { await refreshProjects() }
+    }
+
+    /// Texte unter dieser geschätzten Dauer werden sofort vorgelesen.
+    nonisolated static let instantLimitSeconds = 60.0
+
+    /// Echte Sprachausgabe. Nur in Debug-Builds: `VORLESER_PREVIEW=1` nimmt die Attrappe.
+    @MainActor static func defaultService(store: ProjectStore, library: VoiceLibrary) -> any AudiobookService {
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["VORLESER_PREVIEW"] == "1" {
+            return PreviewAudiobookService(store: store, library: library, simulatedSeconds: previewSeconds)
+        }
+        #endif
+        return LiveAudiobookService(store: store, library: library)
     }
 
     nonisolated static var previewSeconds: Double {
@@ -115,6 +144,8 @@ final class AppModel {
     func goHome() {
         importTask?.cancel()
         player.stop()
+        instant.stop()
+        instantPlayback = false
         Task { await service.stopSample() }
         draft = nil
         typedText = ""
@@ -253,10 +284,13 @@ final class AppModel {
             sourceData: d.sourceData, sourceExtension: d.sourceExtension, language: d.language,
             voiceID: voiceID, voiceName: voiceName, style: d.style.rawValue, tempo: d.tempo.factor,
             resumeProjectID: nil)
+        instantPlayback = d.isShort
         run(job)
     }
 
     private func run(_ job: AudiobookJob) {
+        if instantPlayback { instant.start(tempo: job.tempo) } else { instant.stop() }
+        Notifier.requestAuthorization()
         phase = .preparing
         progress = AudiobookProgress(fraction: 0)
         result = nil
@@ -277,14 +311,27 @@ final class AppModel {
         case .progress(let p):
             phase = .working
             progress = p
+        case .chunkReady(let url, let pause):
+            if instantPlayback { instant.enqueue(url: url, pauseAfterSeconds: pause) }
         case .finishing:
             phase = .finishing
+            instant.finishInput()
         case .finished(let r):
             result = r
-            NSSound(named: "Glass")?.play()
-            showFinished(r)
-            Task { await refreshProjects() }
+            phase = .finishing
+            Task {
+                // Läuft noch „sofort vorlesen“, erst zu Ende hören, dann zum Ergebnis.
+                instant.finishInput()
+                await instant.waitUntilDrained()
+                instantPlayback = false
+                NSSound(named: "Glass")?.play()
+                Notifier.postFinished(title: r.title)
+                showFinished(r)
+                await refreshProjects()
+            }
         case .failed(let key):
+            instant.stop()
+            instantPlayback = false
             screen = .problem(key)
             Task { await refreshProjects() }
         case .stopped:
