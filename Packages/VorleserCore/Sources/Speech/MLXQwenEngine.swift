@@ -156,14 +156,25 @@ public actor MLXQwenEngine: SpeechEngine {
         MLXRandom.seed(seed)
         Memory.peakMemory = 0
         let start = Date()
-        let audio = try await model.generate(
+        // Streaming statt `generate`: das nicht streamende VoiceDesign brauchte in S1 bis 9,8 GB
+        // Spitze (Footprint); stückweises Dekodieren hält den Speicher flach.
+        var floats: [Float] = []
+        var firstAudio: Double?
+        let events = model.generateStream(
             text: sampleText, voice: description, refAudio: nil, refText: nil,
-            language: language.qwenName, generationParameters: model.defaultGenerationParameters)
-        let floats = audio.asArray(Float.self)
+            language: language.qwenName, generationParameters: model.defaultGenerationParameters,
+            streamingInterval: streamingInterval)
+        for try await event in events {
+            try Task.checkCancellation()
+            if case let .audio(chunk) = event {
+                if firstAudio == nil { firstAudio = Date().timeIntervalSince(start) }
+                floats.append(contentsOf: chunk.asArray(Float.self))
+            }
+        }
         lastStats = GenerationStats(
             audioSeconds: Double(floats.count) / sampleRate,
             wallSeconds: Date().timeIntervalSince(start),
-            timeToFirstAudio: Date().timeIntervalSince(start),
+            timeToFirstAudio: firstAudio ?? 0,
             mlxPeakGB: Double(Memory.peakMemory) / 1e9)
         Memory.clearCache()
         return floats
