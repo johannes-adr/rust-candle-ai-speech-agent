@@ -8,7 +8,7 @@ import VorleserSpeech
 import TextPrep
 
 /// Fester Lesetext je Sprache (ca. 10–12 s), neben `Voices` unter `Resources/ReadAloud`.
-private func readAloudText(_ language: Language, voices: VoiceStore, override: String?) throws -> String {
+func readAloudText(_ language: Language, voices: VoiceStore, override: String?) throws -> String {
     let dir = override.map { URL(fileURLWithPath: $0, isDirectory: true) }
         ?? voices.directory.deletingLastPathComponent().appending(path: "ReadAloud", directoryHint: .isDirectory)
     let url = dir.appending(path: "\(language.rawValue).txt")

@@ -20,7 +20,7 @@ actor LiveAudiobookService: AudiobookService {
     init(store: ProjectStore, library: VoiceLibrary, bits: ModelBits = .four, engine: (any SpeechEngine)? = nil) {
         self.store = store
         self.library = library
-        self.job = SynthesisJob(engine: engine ?? MLXQwenEngine(bits: bits), store: store)
+        self.job = SynthesisJob(engine: engine ?? (bits == .four ? SharedSpeechEngine.shared : MLXQwenEngine(bits: bits)), store: store)
     }
 
     // MARK: Erzeugen

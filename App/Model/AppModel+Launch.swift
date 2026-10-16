@@ -66,6 +66,19 @@ enum DebugLaunch {
             model.typedText = sample(paragraphs: 3)
             model.submitTypedText()
             model.showLanguagePicker = demo == "language"
+        case "describe", "describeWorking", "describeChoose", "describeName":
+            // Stimme beschreiben (Phase 4) mit der Attrappe des Dienstes (VORLESER_PREVIEW=1).
+            model.typedText = sample(paragraphs: 3)
+            model.submitTypedText()
+            model.startDescribe()
+            if demo != "describe" {
+                model.describe?.wishText = "ruhig und warm, wie eine Großmutter"
+                model.describe?.tryVoices()
+                if demo == "describeWorking" { try? await Task.sleep(for: .milliseconds(1500)) } else {
+                    await waitUntil { model.describe?.step == .choose }
+                    if demo == "describeName", let p = model.describe?.proposals.first { model.describe?.take(p) }
+                }
+            }
         case "working":
             model.typedText = sample(paragraphs: 40)
             model.submitTypedText()

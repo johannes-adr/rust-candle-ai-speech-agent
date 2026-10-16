@@ -18,6 +18,10 @@ public struct RecordedVoiceInfo: Sendable, Equatable, Codable, Identifiable {
     public var durationSeconds: Double
     /// "reading" (fester Lesetext), "provided" oder "recognized".
     public var transcriptSource: String
+    /// Nur bei beschriebenen Stimmen (`kind == .designed`): der Wunsch, die VoiceDesign-Anweisung und der Seed.
+    public var wish: String? = nil
+    public var prompt: String? = nil
+    public var seed: UInt64? = nil
 }
 
 public enum RecordedVoiceError: Error, Sendable, Equatable, CustomStringConvertible {
@@ -127,8 +131,8 @@ public struct RecordedVoiceStore: Sendable {
     }
 
     private func makeVoice(_ info: RecordedVoiceInfo, text: String) -> Voice {
-        Voice(id: info.id, name: info.name, language: info.language, kind: .recorded,
-              referenceAudio: audioURL(id: info.id), referenceText: text)
+        Voice(id: info.id, name: info.name, language: info.language, kind: info.kind,
+              referenceAudio: audioURL(id: info.id), referenceText: text, description: info.wish)
     }
 
     // MARK: Ändern und Löschen
@@ -138,10 +142,15 @@ public struct RecordedVoiceStore: Sendable {
         let n = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !n.isEmpty else { return }
         info.name = String(n.prefix(40))
+        try write(info)
+    }
+
+    /// Schreibt die Metadaten (atomar).
+    func write(_ info: RecordedVoiceInfo) throws {
         let enc = JSONEncoder()
         enc.dateEncodingStrategy = .iso8601
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]
-        try enc.encode(info).write(to: metadataURL(id: id), options: .atomic)
+        try enc.encode(info).write(to: metadataURL(id: info.id), options: .atomic)
     }
 
     /// Löscht die Stimme endgültig. Die App fragt vorher nach und bietet das nur im Helfer-Fenster an.

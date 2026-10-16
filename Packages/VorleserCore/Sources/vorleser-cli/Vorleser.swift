@@ -19,7 +19,7 @@ struct Vorleser: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "vorleser-cli",
         abstract: "Wandelt PDF oder Text in eine MP3 um (Qwen3-TTS, lokal).",
-        subcommands: [Read.self, Voices.self, DesignPresets.self, AdoptPresets.self, ImportVoice.self, DeleteVoice.self, CheckReading.self],
+        subcommands: [Read.self, Voices.self, DesignPresets.self, AdoptPresets.self, ImportVoice.self, DeleteVoice.self, CheckReading.self, DesignVoice.self],
         defaultSubcommand: Read.self)
 }
 

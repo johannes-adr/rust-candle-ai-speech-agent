@@ -6,7 +6,7 @@ import TextPrep
 extension AppModel {
     /// Ist gerade eine aufgenommene (eigene) Stimme gewählt? Dann gibt es keine Stil-Knöpfe.
     var isOwnVoiceSelected: Bool {
-        draft?.voiceID?.hasPrefix(RecordedVoiceStore.idPrefix) ?? false
+        (draft?.voiceID?.hasPrefix(RecordedVoiceStore.idPrefix) ?? false) && !isDesignedVoice(draft?.voiceID)
     }
 
     /// Knopf „Meine eigene Stimme“ in Schritt ②.

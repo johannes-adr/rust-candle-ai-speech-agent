@@ -115,7 +115,12 @@ public struct VoiceStore: Sendable {
 
     /// Eigene Stimmen einer Sprache (leer ohne `custom`).
     public func recordedVoices(for language: Language) -> [RecordedVoiceInfo] {
-        custom?.list(language: language) ?? []
+        (custom?.list(language: language) ?? []).filter { $0.kind != .designed }
+    }
+
+    /// Beschriebene Stimmen einer Sprache (Phase 4, „Design → Klon“).
+    public func designedVoices(for language: Language) -> [RecordedVoiceInfo] {
+        (custom?.list(language: language) ?? []).filter { $0.kind == .designed }
     }
 
     // MARK: Datei lesen
