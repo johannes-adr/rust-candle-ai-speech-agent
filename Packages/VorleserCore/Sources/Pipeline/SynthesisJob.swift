@@ -134,8 +134,9 @@ public actor SynthesisJob {
                 throw SynthesisFailure.languageUnknown
             }
 
-            if let existing = await store.findExisting(
-                sourceHash: imported.hash, language: language, voiceID: request.voiceKey) {
+            if let existing = await Self.existingProject(
+                in: store, sourceHash: imported.hash, language: language, voiceID: request.voice.id,
+                style: request.style) {
                 project = existing
                 resumed = true
             } else {
@@ -147,7 +148,7 @@ public actor SynthesisJob {
                     project = try await store.create(
                         title: title, sourceHash: imported.hash, sourceKind: imported.kind,
                         sourceData: imported.sourceData, sourceExtension: imported.sourceExtension,
-                        language: language, voiceID: request.voiceKey, style: request.style,
+                        language: language, voiceID: request.voice.id, style: request.style,
                         tempo: request.tempo, chunks: chunks,
                         pageIndices: Self.pageIndices(for: chunks, pageCount: pageCount))
                 } catch { throw SynthesisFailure.storeFailed("\(error)") }
@@ -191,6 +192,20 @@ public actor SynthesisJob {
             language: final.language, measuredLUFS: export.measuredLUFS)
     }
 
+    /// Gleiches Dokument, gleiche Sprache, Stimme und Stil schon angefangen? Dann dort weitermachen.
+    /// (`ProjectStore.findExisting` kennt den Stil nicht; ein anderer Stil ist ein anderes Hörbuch.)
+    public static func existingProject(
+        in store: ProjectStore, sourceHash: String, language: Language, voiceID: String, style: String?
+    ) async -> Project? {
+        for summary in await store.list() {
+            if let p = try? await store.load(id: summary.id), p.sourceHash == sourceHash,
+               p.language == language, p.voiceID == voiceID, p.style == style {
+                return p
+            }
+        }
+        return nil
+    }
+
     // MARK: Import
 
     private struct Imported {
@@ -229,7 +244,7 @@ public actor SynthesisJob {
         }
     }
 
-    static func plainText(_ doc: TextDocument) -> String {
+    public static func plainText(_ doc: TextDocument) -> String {
         doc.blocks.map { b -> String in
             switch b {
             case let .heading(_, t): t
@@ -351,7 +366,8 @@ public actor SynthesisJob {
                 remainingSeconds: est.remainingSeconds, audioSeconds: audioSeconds,
                 realTimeFactor: audioSeconds > 0 ? outcome.compute / audioSeconds : 0,
                 attempts: outcome.attempts, isSuspicious: best.report.isSuspicious,
-                fileURL: file, sampleRate: rate)))
+                fileURL: file, sampleRate: rate,
+                pauseAfterSeconds: config.pauses.seconds(for: Self.pause(after: pc.chunk.kind)))))
         }
     }
 

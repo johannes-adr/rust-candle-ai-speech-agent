@@ -52,10 +52,6 @@ public struct SynthesisRequest: Sendable {
         self.sourceData = sourceData
         self.sourceExtension = sourceExtension
     }
-
-    /// Schlüssel im Projekt-Manifest: Stimme plus Stil, damit ein anderer Stil kein altes
-    /// Projekt fortsetzt.
-    var voiceKey: String { style.map { "\(voice.id)@\($0)" } ?? voice.id }
 }
 
 public struct SynthesisConfig: Sendable {
@@ -112,6 +108,8 @@ public struct SynthesisProgress: Sendable, Equatable {
     /// Fertiger Abschnitt als CAF (für „sofort vorlesen“).
     public var fileURL: URL
     public var sampleRate: Double
+    /// Pause, die im fertigen Hörbuch auf diesen Abschnitt folgt (für Sofort-Wiedergabe).
+    public var pauseAfterSeconds: Double
 }
 
 public enum SynthesisStage: String, Sendable, Equatable {
