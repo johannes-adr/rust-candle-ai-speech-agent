@@ -16,6 +16,8 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: complete
+    # Nur Apple Silicon: MLX läuft nicht auf Intel, ein Universal-Build kostet nur Bauzeit.
+    ARCHS: arm64
     # Signieren: leer = "Sign to Run Locally" (ad hoc). Mit dem kostenlosen Personal Team
     # bleibt die Mikrofon-Erlaubnis über Neubauten erhalten:
     #   VORLESER_TEAM=ABCDE12345 scripts/install.sh
