@@ -95,6 +95,8 @@ final class OmaRulesTests: XCTestCase {
     func testNoTechnicalTermsInGermanUI() throws {
         let banned = ["TTS", "Modell", "Klonen", "MP3", "Bitrate", "KI-Stimme"]
         for (key, raw) in try catalog() {
+            // Die Helfer-Einstellungen dürfen Fachwörter benutzen (nicht für die Oma).
+            if key.hasPrefix("helper.") { continue }
             let entry = try XCTUnwrap(raw as? [String: Any])
             for text in values(entry, "de") + values(entry, "pt-PT") {
                 for word in banned {
