@@ -4,7 +4,7 @@ import Observation
 import SwiftUI
 
 enum HelperTab: String, CaseIterable, Identifiable {
-    case helper, folder, quality, voices, books, logs
+    case helper, folder, quality, model, voices, books, logs
     var id: String { rawValue }
     var titleKey: LocalizedStringKey { LocalizedStringKey("helper.tab.\(rawValue)") }
     var symbol: String {
@@ -12,6 +12,7 @@ enum HelperTab: String, CaseIterable, Identifiable {
         case .helper: "person.crop.circle"
         case .folder: "folder"
         case .quality: "slider.horizontal.3"
+        case .model: "cpu"
         case .voices: "waveform"
         case .books: "headphones"
         case .logs: "doc.text.magnifyingglass"
@@ -52,6 +53,7 @@ struct HelperSettingsView: View {
         case .helper: HelperInfoTab()
         case .folder: FolderTab()
         case .quality: QualityTab()
+        case .model: ModelTab()
         case .voices: VoicesTab()
         case .books: BooksTab()
         case .logs: LogsTab()

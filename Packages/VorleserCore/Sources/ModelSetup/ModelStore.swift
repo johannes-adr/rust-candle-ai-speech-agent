@@ -20,6 +20,8 @@ public enum ModelStatus: Sendable, Equatable {
 /// Models/
 ///   mlx-community--Qwen3-…-4bit@<revision>/   fertig; enthält .vorleser-ready.json
 ///   .staging/<dieselbe Ordnerbezeichnung>/    Download im Gang: fertige Dateien + *.part
+///   manifests/<Ordnerbezeichnung>.json        Dateiliste einer vom Helfer gewählten Version
+///   selection.json                            gewählte Modelle je Rolle (siehe ModelSelection)
 /// ```
 /// Ein Modell ist erst dann „fertig“, wenn der Zwischenordner mit einem einzigen `rename`
 /// an seinen endgültigen Platz verschoben wurde. Ein Abbruch hinterlässt also nie einen
@@ -110,7 +112,7 @@ public struct ModelStore: Sendable {
     /// Ohne mitgeliefertes Manifest zählt nur die Prüfmarke.
     public func locate(_ ref: ModelRef) -> URL? {
         let dir = directory(for: ref)
-        if let manifest = ModelManifest.bundled(for: ref) {
+        if let manifest = manifest(for: ref) {
             return status(of: manifest).isReady ? dir : nil
         }
         return FileManager.default.fileExists(atPath: markerURL(for: ref).path) ? dir : nil

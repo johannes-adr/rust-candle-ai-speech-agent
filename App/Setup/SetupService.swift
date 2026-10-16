@@ -25,10 +25,10 @@ struct LiveSetupService: SetupServicing {
     }
 
     func manifests(bits: ModelBits, includeVoiceDesign: Bool) -> [ModelManifest]? {
-        guard let base = ModelSpec.pinned(.base, bits: bits).flatMap(ModelManifest.bundled(for:)) else { return nil }
+        guard let base = ModelSelection.current(role: ModelKind.base.rawValue, bits: bits.rawValue, store: store)?.manifest else { return nil }
         var list = [base]
         if includeVoiceDesign {
-            guard let design = ModelSpec.pinned(.voiceDesign, bits: .four).flatMap(ModelManifest.bundled(for:)) else { return nil }
+            guard let design = ModelSelection.current(role: ModelKind.voiceDesign.rawValue, bits: ModelBits.four.rawValue, store: store)?.manifest else { return nil }
             list.append(design)
         }
         return list

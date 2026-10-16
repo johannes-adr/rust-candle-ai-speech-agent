@@ -37,7 +37,8 @@ public actor MLXQwenEngine: SpeechEngine {
                 cacheRoot: URL = ModelRef.defaultHuggingFaceCacheRoot,
                 fallbackToHuggingFaceCache: Bool = true) {
         self.init(locator: { kind in
-            guard let spec = ModelSpec.pinned(kind, bits: bits) else {
+            // Pro Ladevorgang neu auflösen: eine Wahl des Helfers wirkt beim nächsten Laden.
+            guard let spec = ModelSelection.current(role: kind.rawValue, bits: bits.rawValue, store: store)?.ref else {
                 throw SpeechEngineError.modelMissing("\(kind) \(bits.rawValue)-bit ist nicht festgelegt")
             }
             if let dir = store.locate(spec) { return dir }
