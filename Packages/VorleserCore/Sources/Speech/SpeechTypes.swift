@@ -1,4 +1,5 @@
 import Foundation
+import ModelSetup
 import TextPrep
 
 /// Welches Modell gerade im Speicher liegt. Nie beide gleichzeitig.
@@ -13,45 +14,31 @@ public enum ModelBits: Int, Sendable, CaseIterable, Codable {
     case eight = 8
 }
 
-/// Ein fest gepinntes Modell auf Hugging Face.
-public struct ModelSpec: Sendable, Hashable {
-    public let repo: String
-    public let revision: String
+/// Ein fest gepinntes Modell auf Hugging Face (Repo + Commit-Hash). Der Typ liegt in `ModelSetup`,
+/// dort auch Ordner, Manifest, Download und Prüfsummen.
+public typealias ModelSpec = ModelRef
 
-    public init(repo: String, revision: String) {
-        self.repo = repo
-        self.revision = revision
-    }
-
-    /// Gepinnte Repos (Stand 16.10.2026, siehe docs/spikes/S1-engine.md).
-    public static func pinned(_ kind: ModelKind, bits: ModelBits) -> ModelSpec? {
+extension ModelRef {
+    /// Gepinnte Repos (Stand 16.10.2026, siehe docs/spikes/S1-engine.md). Die Dateilisten mit
+    /// Prüfsummen stehen als Manifeste in `ModelSetup/Manifests`.
+    public static func pinned(_ kind: ModelKind, bits: ModelBits) -> ModelRef? {
         switch (kind, bits) {
         case (.base, .four):
-            ModelSpec(repo: "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-4bit",
-                      revision: "37e955a1deb861c088ae5f3a67043185f3d1a60c")
+            ModelRef(repo: "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-4bit",
+                     revision: "37e955a1deb861c088ae5f3a67043185f3d1a60c")
         case (.base, .eight):
-            ModelSpec(repo: "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-8bit",
-                      revision: "e7dd0585652209fa0d7783659aad4e8a324de11c")
+            ModelRef(repo: "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-8bit",
+                     revision: "e7dd0585652209fa0d7783659aad4e8a324de11c")
         case (.voiceDesign, .four):
-            ModelSpec(repo: "mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-4bit",
-                      revision: "5c390979e4b93af5f2932f90742ca99c7dd04687")
+            ModelRef(repo: "mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-4bit",
+                     revision: "5c390979e4b93af5f2932f90742ca99c7dd04687")
         default:
             nil
         }
     }
 
-    /// Ordner des Snapshots im Hugging-Face-Cache (`models--org--name/snapshots/<rev>`).
-    public func huggingFaceSnapshotDirectory(cacheRoot: URL = ModelSpec.defaultCacheRoot) -> URL {
-        cacheRoot
-            .appendingPathComponent("models--" + repo.replacingOccurrences(of: "/", with: "--"))
-            .appendingPathComponent("snapshots")
-            .appendingPathComponent(revision)
-    }
-
-    public static var defaultCacheRoot: URL {
-        FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".cache/huggingface/hub")
-    }
+    /// Alte Schreibweise (Entwickler-Cache). Siehe `huggingFaceSnapshotDirectory(cacheRoot:)`.
+    public static var defaultCacheRoot: URL { defaultHuggingFaceCacheRoot }
 }
 
 /// Art der Stimme (PLAN §4.2).

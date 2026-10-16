@@ -1,0 +1,66 @@
+{
+  "files" : [
+    {
+      "path" : "config.json",
+      "sha256" : "36477d07e2ac89f79c1410a9782ed69860fbfcc871edea1728624389072e25fd",
+      "size" : 5522
+    },
+    {
+      "path" : "generation_config.json",
+      "sha256" : "f1b90b4513f3b34c62851049e2492d7b4c5940daf1276f89c82b8ef04127f3aa",
+      "size" : 245
+    },
+    {
+      "path" : "merges.txt",
+      "sha256" : "599bab54075088774b1733fde865d5bd747cbcc7a547c5bc12610e874e26f5e3",
+      "size" : 1671839
+    },
+    {
+      "path" : "model.safetensors",
+      "sha256" : "ac973aa38ec79d4b4b52bf858948f0d47dd909aa4bcd383f5b900e277410fdb5",
+      "size" : 1649238423
+    },
+    {
+      "path" : "model.safetensors.index.json",
+      "sha256" : "2b71cbd2c84cb59d0d71383cc55166ad7108180bfd7e47d2e3a6698f3721abfb",
+      "size" : 78070
+    },
+    {
+      "path" : "preprocessor_config.json",
+      "sha256" : "efdde1022ea9d76928bf7a9cd53139138f5ba2e466e837f08f6105ab1af1c119",
+      "size" : 127
+    },
+    {
+      "path" : "speech_tokenizer/config.json",
+      "sha256" : "ee65bb901c876664ab8707c487157aa1a6ee57c65969b28fb5ec9dc211e68167",
+      "size" : 2336
+    },
+    {
+      "path" : "speech_tokenizer/configuration.json",
+      "sha256" : "6bc26d64eb5024b4d1dab5a52371958b429256d6c9d59787f1f5294a54e0cebd",
+      "size" : 76
+    },
+    {
+      "path" : "speech_tokenizer/model.safetensors",
+      "sha256" : "836b7b357f5ea43e889936a3709af68dfe3751881acefe4ecf0dbd30ba571258",
+      "size" : 682293092
+    },
+    {
+      "path" : "speech_tokenizer/preprocessor_config.json",
+      "sha256" : "fcb3805e597e786d4067706e602f6688524640f8d3396790e2e09b5942fcbdfb",
+      "size" : 234
+    },
+    {
+      "path" : "tokenizer_config.json",
+      "sha256" : "dc3c31c3bdaedd5016382bb3cbe07323026775ad51f5a4fb564505992ae4a670",
+      "size" : 7344
+    },
+    {
+      "path" : "vocab.json",
+      "sha256" : "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+      "size" : 2776833
+    }
+  ],
+  "repo" : "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-4bit",
+  "revision" : "37e955a1deb861c088ae5f3a67043185f3d1a60c"
+}

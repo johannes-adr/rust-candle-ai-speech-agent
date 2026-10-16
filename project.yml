@@ -54,6 +54,8 @@ targets:
       - package: VorleserCore
         product: VorleserSpeech
       - package: VorleserCore
+        product: ModelSetup
+      - package: VorleserCore
         product: Pipeline
       - package: VorleserCore
         product: VoiceCapture
