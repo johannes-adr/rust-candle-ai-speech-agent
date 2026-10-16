@@ -9,7 +9,7 @@ import VorleserSpeech
 
 // MARK: Stimmen
 
-enum VoiceOrigin: Equatable { case builtIn, recorded, designed }
+enum VoiceOrigin: Equatable { case recorded, designed }
 
 struct HelperVoiceEntry: Identifiable, Equatable {
     var id: String
@@ -18,8 +18,6 @@ struct HelperVoiceEntry: Identifiable, Equatable {
     var origin: VoiceOrigin
     var createdAt: Date?
     var durationSeconds: Double?
-    /// Nur eigene und beschriebene Stimmen lassen sich umbenennen und löschen; eingebaute nie.
-    var isEditable: Bool { origin != .builtIn }
 }
 
 enum HelperVoiceError: Error, Equatable { case notEditable }
@@ -38,10 +36,8 @@ final class HelperVoicesModel {
     }
 
     func reload() {
-        var out: [HelperVoiceEntry] = library.store.allPresets.map {
-            HelperVoiceEntry(id: $0.id, name: $0.name, language: $0.language, origin: .builtIn)
-        }
-        for info in library.store.custom?.list() ?? [] {
+        var out: [HelperVoiceEntry] = []
+        for info in library.store.custom.list() {
             out.append(HelperVoiceEntry(
                 id: info.id, name: info.name, language: info.language,
                 origin: info.kind == .designed ? .designed : .recorded,
@@ -51,27 +47,23 @@ final class HelperVoicesModel {
     }
 
     func rename(id: String, to name: String) throws {
-        guard entry(id)?.isEditable == true, let store = library.store.custom else { throw HelperVoiceError.notEditable }
-        try store.rename(id: id, to: name)
+        guard entry(id) != nil else { throw HelperVoiceError.notEditable }
+        try library.store.custom.rename(id: id, to: name)
         reload()
     }
 
     func delete(id: String) throws {
-        guard entry(id)?.isEditable == true, let store = library.store.custom else { throw HelperVoiceError.notEditable }
+        guard entry(id) != nil else { throw HelperVoiceError.notEditable }
         if playingID == id { stopSample() }
-        try store.delete(id: id)
+        try library.store.custom.delete(id: id)
         reload()
     }
 
     func entry(_ id: String) -> HelperVoiceEntry? { entries.first { $0.id == id } }
 
-    /// Aufnahme, die als Probe gespielt wird: eingebaute Stimmen im ruhigen Stil, sonst der erste vorhandene.
+    /// Aufnahme, die als Probe gespielt wird.
     func sampleURL(for id: String) -> URL? {
-        guard let e = entry(id) else { return nil }
-        if e.isEditable { return library.store.custom?.audioURL(id: id) }
-        let styles = library.store.availableStyles(voiceID: id)
-        guard let style = styles.contains("calm") ? "calm" : styles.first else { return nil }
-        return library.store.referenceURL(voiceID: id, style: style)
+        entry(id) == nil ? nil : library.store.custom.audioURL(id: id)
     }
 
     func hasSample(_ id: String) -> Bool { sampleURL(for: id) != nil }

@@ -207,7 +207,7 @@ final class CameraFlowTests: XCTestCase {
     // MARK: Zusammenspiel mit der App und echtes Lesen
 
     func testRealOCROfFixturePhotosLeadsToVoiceScreen() async throws {
-        let lib = VoiceLibrary(directory: repo.appending(path: "Resources/Voices"), customDirectory: dir.appending(path: "v"))
+        let lib = VoiceLibrary(customDirectory: dir.appending(path: "v"))
         let settings = AppSettings(defaults: UserDefaults(suiteName: "de.vorleser.tests.cam.\(UUID().uuidString)")!)
         let model = AppModel(settings: settings, library: lib, storeRoot: dir.appending(path: "p"))
         model.makeCamera = { DemoCamera(phone: true, photos: [self.fixture, self.fixture]) }

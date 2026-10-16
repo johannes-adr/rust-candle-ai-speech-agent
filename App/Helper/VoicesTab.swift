@@ -1,5 +1,5 @@
-// Reiter „Stimmen“: alle Stimmen (eingebaut, aufgenommen, beschrieben) mit Probe, Umbenennen, Löschen
-// (nur eigene und beschriebene, mit Nachfrage) und Import einer Audiodatei.
+// Reiter „Stimmen“: alle eigenen Stimmen (aufgenommen, beschrieben) mit Probe, Umbenennen, Löschen
+// (mit Nachfrage) und Import einer Audiodatei.
 import SwiftUI
 import VorleserSpeech
 
@@ -13,18 +13,14 @@ struct VoicesTab: View {
     var body: some View {
         Form {
             if let voices {
-                Section("helper.voices.builtIn") {
-                    ForEach(voices.entries.filter { $0.origin == .builtIn }) { row($0, voices) }
-                }
                 Section("helper.voices.own") {
-                    let own = voices.entries.filter { $0.origin != .builtIn }
-                    if own.isEmpty { Text("helper.voices.ownEmpty").foregroundStyle(.secondary) }
-                    ForEach(own) { row($0, voices) }
+                    if voices.entries.isEmpty { Text("helper.voices.ownEmpty").foregroundStyle(.secondary) }
+                    ForEach(voices.entries) { row($0, voices) }
                 }
             }
             Section {
                 DisclosureGroup("ownVoice.settings.import.header") {
-                    VoiceImportForm(store: model.library.store.custom ?? RecordedVoiceStore()) {
+                    VoiceImportForm(store: model.library.store.custom) {
                         voices?.reload()
                     }
                 }
@@ -79,10 +75,8 @@ struct VoicesTab: View {
             Spacer()
             Button(voices.playingID == v.id ? "helper.voices.stop" : "voice.sample") { voices.toggleSample(id: v.id) }
                 .disabled(!voices.hasSample(v.id))
-            if v.isEditable {
-                Button("helper.voices.rename") { newName = v.name; renaming = v }
-                Button("ownVoice.settings.delete") { pendingDelete = v }
-            }
+            Button("helper.voices.rename") { newName = v.name; renaming = v }
+            Button("ownVoice.settings.delete") { pendingDelete = v }
         }
     }
 
@@ -95,7 +89,6 @@ struct VoicesTab: View {
 
     private func originKey(_ o: VoiceOrigin) -> String {
         switch o {
-        case .builtIn: "helper.voices.origin.builtIn"
         case .recorded: "helper.voices.origin.recorded"
         case .designed: "helper.voices.origin.designed"
         }

@@ -1,35 +1,8 @@
-// Auf Bildschirm ②: Stilfrage mit „Eigener Wunsch …“ und die Karten der beschriebenen Stimmen.
+// Auf Bildschirm ②: die Karten der beschriebenen Stimmen und der Weg zum Beschreiben.
 import Pipeline
 import VorleserSpeech
 import SwiftUI
 import TextPrep
-
-/// Stilknöpfe plus „Eigener Wunsch …“. Bei einer beschriebenen Stimme steckt der Stil schon in
-/// der Beschreibung (Base übernimmt Sprechweise aus der Referenz, `instruct` wirkt dort nicht).
-struct StyleSection: View {
-    @Environment(AppModel.self) private var model
-    var draft: Draft
-
-    var body: some View {
-        let designed = model.isDesignedVoice(draft.voiceID)
-        Text("voice.styleQuestion").font(OmaStyle.bodyBold).padding(.top, 4)
-        if designed {
-            Text("describeVoice.styleHint").foregroundStyle(Color.omaSecondaryText)
-        }
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 250), spacing: 16)], alignment: .leading, spacing: 16) {
-            if !designed {
-                ForEach(VoiceStyle.allCases) { style in
-                    ChoiceButton(
-                        title: LocalizedStringKey(style.titleKey), systemImage: style.symbol,
-                        selected: draft.style == style) { model.selectStyle(style) }
-                }
-            }
-            ChoiceButton(title: "describeVoice.custom", systemImage: "text.bubble", selected: designed) {
-                model.startDescribe()
-            }
-        }
-    }
-}
 
 /// Die selbst beschriebenen Stimmen dieser Sprache als Karten.
 struct DesignedVoicesSection: View {
@@ -76,7 +49,7 @@ struct DesignedVoiceCard: View {
             Button {
                 if playing { PreviewPlayer.shared.stop() } else {
                     playing = true
-                    if let url = model.library.store.custom?.audioURL(id: voice.id) {
+                    if let url = model.library.referenceURL(voiceID: voice.id) {
                         PreviewPlayer.shared.play(url) { playing = false }
                     }
                 }
@@ -93,11 +66,16 @@ struct DesignedVoiceCard: View {
 // MARK: Anbindung an AppModel
 
 extension AppModel {
-    /// „Eigener Wunsch …“ auf ②: öffnet den Bildschirm zum Beschreiben.
+    /// Sprache der Oberfläche ("de" oder "pt").
+    static var uiLanguageCode: String {
+        (Bundle.main.preferredLocalizations.first ?? "de").hasPrefix("pt") ? "pt" : "de"
+    }
+
+    /// „Stimme beschreiben“ auf ②: öffnet den Bildschirm zum Beschreiben.
     func startDescribe() {
         guard let d = draft else { return }
         let model = makeDescribeModel()
-        let ui: Language = VoiceCard.uiLanguage == "pt" ? .pt : .de
+        let ui: Language = Self.uiLanguageCode == "pt" ? .pt : .de
         model.begin(readingLanguage: d.language, uiLanguage: ui)
         model.onExit = { [weak self] in
             PreviewPlayer.shared.stop()
@@ -111,19 +89,9 @@ extension AppModel {
         screen = .describeVoice
     }
 
-    /// Name der Stimme für Anzeige und MP3-Tags (fertige oder beschriebene Stimme).
+    /// Name der Stimme für Anzeige und MP3-Tags.
     func voiceName(_ id: String) -> String {
         library.voice(id: id)?.name ?? ""
-    }
-
-    func isDesignedVoice(_ id: String?) -> Bool {
-        guard let id, id.hasPrefix(RecordedVoiceStore.idPrefix) else { return false }
-        return library.store.custom?.isDesigned(id: id) ?? false
-    }
-
-    /// Bei beschriebenen Stimmen gibt es keinen Stil (steckt in der Referenz).
-    func styleKey(forVoice id: String?, style: VoiceStyle) -> String? {
-        isDesignedVoice(id) ? nil : style.rawValue
     }
 
     private func makeDescribeModel() -> DescribeVoiceModel {

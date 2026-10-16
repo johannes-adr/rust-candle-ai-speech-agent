@@ -241,40 +241,37 @@ final class OwnVoiceTests: XCTestCase {
 
     // MARK: Ausgabe
 
-    func testRecordedVoiceAppearsInLibraryAndHidesStyles() throws {
+    func testRecordedVoiceAppearsInLibrary() throws {
         let custom = dir.appending(path: "custom", directoryHint: .isDirectory)
-        let lib = VoiceLibrary(directory: repo.appending(path: "Resources/Voices"), customDirectory: custom)
+        let lib = VoiceLibrary(customDirectory: custom)
         XCTAssertTrue(lib.recordedVoices(for: .de).isEmpty)
-        let saved = try XCTUnwrap(lib.store.custom).save(
+        let saved = try lib.store.custom.save(
             samples: syntheticSpeech(seconds: 11), sampleRate: 48_000, transcript: "Guten Tag.", name: "Oma", language: .de,
             consent: true, source: "recording", transcriptSource: "reading")
         XCTAssertEqual(lib.recordedVoices(for: .de).map(\.id), [saved.id])
         XCTAssertTrue(lib.recordedVoices(for: .pt).isEmpty)
         XCTAssertEqual(lib.voice(id: saved.id)?.name, "Oma")
-        XCTAssertNotNil(lib.referenceURL(voiceID: saved.id, style: "calm"))
-        XCTAssertNotNil(lib.referenceURL(voiceID: saved.id, style: "happy"))
-        // Die Engine bekommt dieselbe Stimme über den VoiceStore.
-        XCTAssertEqual(lib.store.voice(id: saved.id, style: "fairytale", fallback: true)?.referenceText, "Guten Tag.")
+        XCTAssertNotNil(lib.referenceURL(voiceID: saved.id))
+        // Die Engine bekommt dieselbe Stimme über den VoiceStore, mit dem gespeicherten Text.
+        XCTAssertEqual(lib.store.voice(id: saved.id)?.referenceText, "Guten Tag.")
 
         let model = AppModel(library: lib, storeRoot: dir.appending(path: "projects"))
         model.typedText = "Das ist ein Text. Er ist kurz."
         model.submitTypedText()
         model.setLanguage(.de)
-        model.selectVoice(saved.id)
-        XCTAssertTrue(model.isOwnVoiceSelected)
-        model.selectVoice("de-helga")
-        XCTAssertFalse(model.isOwnVoiceSelected)
+        // Die erste Stimme der Sprache ist vorgewählt, sobald es sie gibt.
+        model.setLanguage(.de)
+        XCTAssertEqual(model.draft?.voiceID, saved.id)
 
-        // Nach dem Löschen im Helfer-Fenster fällt die Auswahl auf eine fertige Stimme zurück.
-        model.selectVoice(saved.id)
-        try lib.store.custom?.delete(id: saved.id)
+        // Nach dem Löschen im Helfer-Fenster ist keine Stimme mehr gewählt (Vorlesen geht dann nicht).
+        try lib.store.custom.delete(id: saved.id)
         model.validateSelectedVoice()
-        XCTAssertEqual(model.draft?.voiceID, "de-helga")
+        XCTAssertNil(model.draft?.voiceID)
     }
 
     func testStartOwnVoiceNavigatesAndFinishReturnsToVoiceScreen() throws {
         let custom = dir.appending(path: "custom", directoryHint: .isDirectory)
-        let lib = VoiceLibrary(directory: repo.appending(path: "Resources/Voices"), customDirectory: custom)
+        let lib = VoiceLibrary(customDirectory: custom)
         let model = AppModel(library: lib, storeRoot: dir.appending(path: "projects"))
         model.typedText = "Das ist ein Text. Er ist kurz."
         model.submitTypedText()

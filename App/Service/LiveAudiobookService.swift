@@ -37,7 +37,7 @@ actor LiveAudiobookService: AudiobookService {
 
     private func run(_ request: AudiobookJob, _ out: AsyncStream<AudiobookEvent>.Continuation) async {
         out.yield(.preparing)
-        guard let voice = library.store.voice(id: request.voiceID, style: request.style, fallback: true) else {
+        guard let voice = library.store.voice(id: request.voiceID) else {
             out.yield(.failed(reasonKey: "problem.noVoice"))
             out.finish()
             return
@@ -47,7 +47,7 @@ actor LiveAudiobookService: AudiobookService {
             : .text("")
         let synthesis = SynthesisRequest(
             title: request.title, source: source, language: request.language, voice: voice,
-            style: request.style, tempo: request.tempo, resumeProjectID: request.resumeProjectID,
+            style: nil, tempo: request.tempo, resumeProjectID: request.resumeProjectID,
             sourceData: request.sourceData, sourceExtension: request.sourceExtension,
             writeChapterFiles: request.writeChapterFiles)
 
@@ -89,12 +89,12 @@ actor LiveAudiobookService: AudiobookService {
 
     // MARK: Proben
 
-    nonisolated func hasSample(voiceID: String, style: String) -> Bool {
-        library.referenceURL(voiceID: voiceID, style: style) != nil
+    nonisolated func hasSample(voiceID: String) -> Bool {
+        library.referenceURL(voiceID: voiceID) != nil
     }
 
-    func playSample(voiceID: String, style: String) throws {
-        guard let url = library.referenceURL(voiceID: voiceID, style: style) else { throw LiveError.nothingToRead }
+    func playSample(voiceID: String) throws {
+        guard let url = library.referenceURL(voiceID: voiceID) else { throw LiveError.nothingToRead }
         try play(url)
     }
 

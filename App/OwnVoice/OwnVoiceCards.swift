@@ -1,8 +1,8 @@
-// Aufgenommene Stimmen in Schritt ②: Karten, ehrlicher Hinweis, Stil-Knöpfe ausblenden.
+// Aufgenommene Stimmen in Schritt ②: Karten.
 import SwiftUI
 import TextPrep
 
-/// Zweite Reihe unter den fertigen Stimmen: die eigenen, aufgenommenen Stimmen der Sprache.
+/// Die eigenen, aufgenommenen Stimmen der Sprache.
 struct RecordedVoiceRow: View {
     @Environment(AppModel.self) private var model
     var draft: Draft
@@ -21,7 +21,7 @@ struct RecordedVoiceRow: View {
 
 struct RecordedVoiceCard: View {
     @Environment(AppModel.self) private var model
-    var voice: PresetVoice
+    var voice: StoredVoice
     var selected: Bool
 
     var body: some View {
@@ -44,32 +44,4 @@ struct RecordedVoiceCard: View {
         }
         .omaCard(selected: selected)
     }
-}
-
-/// Ehrlicher Hinweis statt der Stil-Knöpfe, wenn eine aufgenommene Stimme gewählt ist.
-struct OwnVoiceHonestNote: View {
-    @Environment(AppModel.self) private var model
-
-    var body: some View {
-        if model.isOwnVoiceSelected {
-            HStack(alignment: .top, spacing: 16) {
-                Image(systemName: "info.circle.fill").font(.system(size: 30)).foregroundStyle(Color.omaBorder)
-                Text("ownVoice.honest")
-            }
-            .omaCard()
-        }
-    }
-}
-
-/// Blendet seinen Inhalt aus, solange eine aufgenommene Stimme gewählt ist (Stile wirken dort nicht).
-struct HiddenForOwnVoice: ViewModifier {
-    @Environment(AppModel.self) private var model
-
-    func body(content: Content) -> some View {
-        if !model.isOwnVoiceSelected { content }
-    }
-}
-
-extension View {
-    func hiddenForOwnVoice() -> some View { modifier(HiddenForOwnVoice()) }
 }

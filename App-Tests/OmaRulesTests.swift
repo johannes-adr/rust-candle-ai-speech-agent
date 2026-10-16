@@ -117,33 +117,18 @@ final class OmaRulesTests: XCTestCase {
             for m in text.matches(of: pattern) {
                 let key = String(m.output.1)
                 // Dateinamen und Bundle-IDs sind keine Schlüssel.
-                if key.hasPrefix("de.vorleser") || key == "presets.json" { continue }
+                if key.hasPrefix("de.vorleser") { continue }
                 // SF-Symbole sehen genauso aus wie Schlüssel.
                 if NSImage(systemSymbolName: key, accessibilityDescription: nil) != nil { continue }
                 XCTAssertNotNil(strings[key], "Schlüssel \(key) in \(file.lastPathComponent) fehlt im Katalog")
             }
         }
         // Dynamisch gebaute Schlüssel
-        for style in VoiceStyle.allCases { XCTAssertNotNil(strings[style.titleKey], style.titleKey) }
         for tempo in Tempo.allCases { XCTAssertNotNil(strings[tempo.titleKey], tempo.titleKey) }
         for lang in Language.allCases { XCTAssertNotNil(strings[lang.nameKey], lang.nameKey) }
     }
 
     // MARK: Mitgelieferte Daten
-
-    func testPresetsCoverAllLanguages() {
-        let lib = VoiceLibrary(directory: repo.appending(path: "Resources/Voices"))
-        for lang in Language.allCases {
-            let voices = lib.voices(for: lang)
-            XCTAssertEqual(voices.count, 2, "\(lang)")
-            XCTAssertEqual(voices.filter(\.isFemale).count, 1, "\(lang)")
-            for v in voices {
-                XCTAssertEqual(Set(v.references.keys), Set(VoiceStyle.allCases.map(\.rawValue)))
-                XCTAssertFalse(v.description(for: "de").isEmpty)
-                XCTAssertFalse(v.description(for: "pt").isEmpty)
-            }
-        }
-    }
 
     func testReadAloudTextsExistForAllLanguages() throws {
         for lang in Language.allCases {

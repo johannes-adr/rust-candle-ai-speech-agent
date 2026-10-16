@@ -1,48 +1,22 @@
-// Fertige Stimmen aus Resources/Voices/presets.json (gelesen vom VoiceStore im Package).
+// Eigene Stimmen (aufgenommen, importiert, beschrieben), gelesen vom VoiceStore im Package.
+// Es gibt keine fertigen Stimmen: jede Stimme hat ihre Aufnahme und den Text, mit dem sie
+// aufgenommen wurde.
 import Foundation
 import VorleserSpeech
 import TextPrep
 
-enum VoiceStyle: String, CaseIterable, Sendable, Identifiable {
-    case calm, happy, fairytale, factual
-    var id: String { rawValue }
-    /// Schlüssel in Localizable.xcstrings
-    var titleKey: String { "style.\(rawValue)" }
-    var symbol: String {
-        switch self {
-        case .calm: "leaf"
-        case .happy: "sun.max"
-        case .fairytale: "book"
-        case .factual: "doc.text"
-        }
-    }
-}
-
-struct PresetVoice: Identifiable, Sendable, Equatable {
+/// Eine Stimme für die Anzeige (Karten, Auswahl).
+struct StoredVoice: Identifiable, Sendable, Equatable {
     var id: String
     var name: String
-    var isFemale: Bool
-    /// Kurzbeschreibung je Oberflächensprache ("de", "pt").
-    var descriptions: [String: String]
-    /// Dateiname der Referenz je Stil.
-    var references: [String: String]
-
-    func description(for uiLanguage: String) -> String {
-        descriptions[uiLanguage] ?? descriptions["de"] ?? ""
-    }
 }
 
 /// Dünne Hülle um `VoiceStore` (Package `Speech`): dieselbe Quelle für Oberfläche und Engine.
 struct VoiceLibrary: Sendable {
     let store: VoiceStore
-    /// Ordner mit presets.json und den Referenzaufnahmen.
-    var directory: URL { store.directory }
 
-    init(
-        directory: URL? = Bundle.main.resourceURL?.appending(path: "Voices", directoryHint: .isDirectory),
-        customDirectory: URL = VoiceLibrary.defaultCustomDirectory
-    ) {
-        self.store = VoiceStore(directory: directory ?? URL(fileURLWithPath: "/nonexistent"), customDirectory: customDirectory)
+    init(customDirectory: URL = VoiceLibrary.defaultCustomDirectory) {
+        self.store = VoiceStore(customDirectory: customDirectory)
     }
 
     /// Eigene Stimmen liegen in Application Support (nicht im Paket). Debug: unter `VORLESER_DATA_DIR/Voices`.
@@ -56,33 +30,27 @@ struct VoiceLibrary: Sendable {
         return RecordedVoiceStore.defaultDirectory
     }
 
-    /// Eigene (aufgenommene) Stimmen der Sprache, für Schritt ②.
-    func recordedVoices(for language: Language) -> [PresetVoice] {
+    /// Aufgenommene und importierte Stimmen der Sprache.
+    func recordedVoices(for language: Language) -> [StoredVoice] {
         store.recordedVoices(for: language).map(Self.convert)
     }
 
-    func voices(for language: Language) -> [PresetVoice] {
-        store.presets(for: language).map(Self.convert)
+    /// Alle Stimmen der Sprache (aufgenommen, importiert, beschrieben), für Schritt ②.
+    func voices(for language: Language) -> [StoredVoice] {
+        store.voices(for: language).map(Self.convert)
     }
 
-    func voice(id: String) -> PresetVoice? {
-        if let own = store.custom?.info(id: id) { return Self.convert(own) }
-        return store.preset(id: id).map(Self.convert)
+    func voice(id: String) -> StoredVoice? {
+        store.custom.info(id: id).map(Self.convert)
     }
 
-    /// Pfad der Referenzaufnahme, nur wenn die Datei wirklich da ist.
-    func referenceURL(voiceID: String, style: String) -> URL? {
-        // Eigene Stimmen haben nur eine Aufnahme, unabhängig vom Stil.
-        if let own = store.custom?.info(id: voiceID) { return store.custom?.audioURL(id: own.id) }
-        return store.referenceURL(voiceID: voiceID, style: style)
+    /// Pfad der Aufnahme, nur wenn die Stimme vollständig da ist.
+    func referenceURL(voiceID: String) -> URL? {
+        store.custom.info(id: voiceID).map { store.custom.audioURL(id: $0.id) }
     }
 
-    private static func convert(_ r: RecordedVoiceInfo) -> PresetVoice {
-        PresetVoice(id: r.id, name: r.name, isFemale: false, descriptions: [:], references: [:])
-    }
-
-    private static func convert(_ p: VoicePreset) -> PresetVoice {
-        PresetVoice(id: p.id, name: p.name, isFemale: p.isFemale, descriptions: p.descriptions, references: p.references)
+    private static func convert(_ r: RecordedVoiceInfo) -> StoredVoice {
+        StoredVoice(id: r.id, name: r.name)
     }
 }
 

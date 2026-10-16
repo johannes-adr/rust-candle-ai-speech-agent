@@ -1,4 +1,4 @@
-// ② Stimme: erkannte Sprache, Stimmkarten, Stil, Tempo.
+// ② Stimme: erkannte Sprache, eigene Stimmen, Karten zum Aufnehmen und Beschreiben, Tempo.
 import SwiftUI
 import TextPrep
 
@@ -12,9 +12,6 @@ struct VoiceView: View {
                 voiceCards(draft)
                 if let key = model.sampleMessage { Text(LocalizedStringKey(key)).foregroundStyle(Color.omaSecondaryText) }
 
-                OwnVoiceHonestNote()
-                StyleSection(draft: draft).hiddenForOwnVoice()
-
                 Text("voice.tempo").font(OmaStyle.bodyBold).padding(.top, 4)
                 HStack(spacing: 16) {
                     ForEach(Tempo.allCases) { tempo in
@@ -24,32 +21,34 @@ struct VoiceView: View {
                     }
                 }
             } footer: {
-                HStack {
-                    OmaButton(title: "common.back", systemImage: "chevron.left") { model.goHome() }
-                    Spacer()
-                    OmaButton(title: "voice.start", systemImage: "play.circle.fill", kind: .primary) {
-                        model.startWork()
+                VStack(alignment: .trailing, spacing: 10) {
+                    if draft.voiceID == nil {
+                        Label("voice.needVoice", systemImage: "exclamationmark.circle.fill")
+                            .font(OmaStyle.bodyBold)
                     }
-                    .disabled(draft.voiceID == nil)
+                    HStack {
+                        OmaButton(title: "common.back", systemImage: "chevron.left") { model.goHome() }
+                        Spacer()
+                        OmaButton(title: "voice.start", systemImage: "play.circle.fill", kind: .primary) {
+                            model.startWork()
+                        }
+                        .disabled(draft.voiceID == nil)
+                    }
                 }
             }
         }
     }
 
     @ViewBuilder private func voiceCards(_ draft: Draft) -> some View {
-        let voices = model.library.voices(for: draft.language)
-        if voices.isEmpty {
-            Text("voice.noVoices")
-        }
-        HStack(alignment: .top, spacing: 20) {
-            ForEach(voices) { voice in VoiceCard(voice: voice, selected: draft.voiceID == voice.id) }
-            OwnVoiceCard()
+        if model.library.voices(for: draft.language).isEmpty {
+            NoVoiceCard()
         }
         RecordedVoiceRow(draft: draft)
-        if voices.contains(where: { !model.hasSample(voiceID: $0.id) }) {
-            Text("voice.sampleSoon").foregroundStyle(Color.omaSecondaryText)
-        }
         DesignedVoicesSection(draft: draft)
+        HStack(alignment: .top, spacing: 20) {
+            OwnVoiceCard()
+            DescribeVoiceCard()
+        }
     }
 
     private static func tempoSymbol(_ t: Tempo) -> String {
@@ -108,40 +107,19 @@ struct ChoiceButton: View {
     }
 }
 
-struct VoiceCard: View {
-    @Environment(AppModel.self) private var model
-    var voice: PresetVoice
-    var selected: Bool
-
+/// Freundlicher Hinweis, solange es für die Sprache noch keine Stimme gibt.
+struct NoVoiceCard: View {
     var body: some View {
-        VStack(spacing: 14) {
-            Button { model.selectVoice(voice.id) } label: {
-                VStack(spacing: 10) {
-                    Image(systemName: "person.fill")
-                        .font(.system(size: 44)).foregroundStyle(Color.omaBorder)
-                    Text(voice.name).font(.system(size: 30, weight: .bold))
-                    Text(voice.description(for: Self.uiLanguage)).foregroundStyle(Color.omaSecondaryText)
-                        .multilineTextAlignment(.center)
-                    if selected {
-                        Label("voice.selected", systemImage: "checkmark.circle.fill").font(OmaStyle.bodyBold)
-                    } else {
-                        Label("voice.choose", systemImage: "circle").font(OmaStyle.bodyBold)
-                    }
-                }
-                .frame(maxWidth: .infinity, minHeight: 200)
+        HStack(alignment: .top, spacing: 16) {
+            Image(systemName: "person.crop.circle.badge.questionmark")
+                .font(.system(size: 44)).foregroundStyle(Color.omaBorder)
+            VStack(alignment: .leading, spacing: 8) {
+                Text("voice.empty.title").font(.system(size: 30, weight: .bold))
+                Text("voice.empty.text")
             }
-            .buttonStyle(.plain)
-
-            let hasSample = model.hasSample(voiceID: voice.id)
-            OmaButton(title: "voice.sample", systemImage: "play.fill") { model.playSample(voiceID: voice.id) }
-                .disabled(!hasSample)
+            Spacer(minLength: 0)
         }
-        .omaCard(selected: selected)
-    }
-
-    /// Sprache der Oberfläche für die Kurzbeschreibung ("de" oder "pt").
-    static var uiLanguage: String {
-        (Bundle.main.preferredLocalizations.first ?? "de").hasPrefix("pt") ? "pt" : "de"
+        .omaCard()
     }
 }
 
@@ -160,6 +138,26 @@ struct OwnVoiceCard: View {
             }
             .buttonStyle(.plain)
             OmaButton(title: "voice.own.record", systemImage: "mic.circle") { model.chooseOwnVoice() }
+        }
+        .omaCard()
+    }
+}
+
+struct DescribeVoiceCard: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Button { model.startDescribe() } label: {
+                VStack(spacing: 10) {
+                    Image(systemName: "sparkles").font(.system(size: 44)).foregroundStyle(Color.omaBorder)
+                    Text("voice.describe.title").font(.system(size: 30, weight: .bold)).multilineTextAlignment(.center)
+                    Text("voice.describe.sub").foregroundStyle(Color.omaSecondaryText).multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity, minHeight: 200)
+            }
+            .buttonStyle(.plain)
+            OmaButton(title: "voice.describe.button", systemImage: "text.bubble") { model.startDescribe() }
         }
         .omaCard()
     }

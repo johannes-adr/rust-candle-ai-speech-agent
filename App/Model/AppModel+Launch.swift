@@ -22,7 +22,7 @@ extension AppModel {
 
 #if DEBUG
 /// Springt für Screenshots direkt zu einem Bildschirm:
-/// VORLESER_DEMO=start|text|voice|language|working|done|problem|convert, VORLESER_SNAPSHOT=<png>,
+/// VORLESER_DEMO=start|text|voice|voice-empty|language|working|done|problem|convert, VORLESER_SNAPSHOT=<png>,
 /// VORLESER_APPEARANCE=dark|light, VORLESER_PREVIEW_SECONDS=<Sekunden Simulation>.
 @MainActor
 enum DebugLaunch {
@@ -38,6 +38,9 @@ enum DebugLaunch {
         default: break
         }
         try? await Task.sleep(for: .seconds(1))
+
+        // Es gibt keine fertigen Stimmen: in der Vorschau eine Attrappen-Stimme anlegen (außer „voice-empty“).
+        if env["VORLESER_PREVIEW"] == "1", demo != "voice-empty" { seedDemoVoice(model) }
 
         switch demo {
         case "start":
@@ -62,7 +65,7 @@ enum DebugLaunch {
         case "text":
             model.typedText = "Liebe Frau Meier,"
             model.screen = .typeText
-        case "voice", "language":
+        case "voice", "voice-empty", "language":
             model.typedText = sample(paragraphs: 3)
             model.submitTypedText()
             model.showLanguagePicker = demo == "language"
@@ -101,6 +104,14 @@ enum DebugLaunch {
             snapshot(to: URL(fileURLWithPath: path))
             NSApp.terminate(nil)
         }
+    }
+
+    private static func seedDemoVoice(_ model: AppModel) {
+        guard model.library.voices(for: .de).isEmpty else { return }
+        let tone = (0..<24_000 * 12).map { Float(sin(Double($0) / 24_000 * 2 * .pi * 180)) * 0.2 }
+        _ = try? model.library.store.custom.save(
+            samples: tone, sampleRate: 24_000, transcript: "Lesetext.", name: "Demo-Stimme", language: .de,
+            consent: true, source: "recording", transcriptSource: "reading")
     }
 
     private static func waitUntil(seconds: Int = 60, _ condition: @MainActor () -> Bool) async {

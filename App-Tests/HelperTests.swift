@@ -62,7 +62,7 @@ final class HelperTests: XCTestCase {
         let d = defaults()
         let settings = AppSettings(defaults: d)
         settings.defaultTempo = .faster
-        let lib = VoiceLibrary(directory: repo.appending(path: "Resources/Voices"), customDirectory: dir.appending(path: "v"))
+        let lib = VoiceLibrary(customDirectory: dir.appending(path: "v"))
         let model = AppModel(settings: settings, library: lib, storeRoot: dir.appending(path: "p"))
         model.typedText = "Das ist ein Text. Er ist kurz."
         model.submitTypedText()
@@ -71,10 +71,10 @@ final class HelperTests: XCTestCase {
 
     // MARK: Stimmen
 
-    func testBuiltInVoicesCannotBeChangedOwnVoicesCan() throws {
+    func testOwnVoicesCanBeRenamedAndDeleted() throws {
         let custom = dir.appending(path: "custom", directoryHint: .isDirectory)
-        let lib = VoiceLibrary(directory: repo.appending(path: "Resources/Voices"), customDirectory: custom)
-        let store = try XCTUnwrap(lib.store.custom)
+        let lib = VoiceLibrary(customDirectory: custom)
+        let store = lib.store.custom
         let own = try store.save(
             samples: [Float](repeating: 0.1, count: 24_000), sampleRate: 24_000, transcript: "Guten Tag.", name: "Oma",
             language: .de, consent: true, source: "recording", transcriptSource: "reading")
@@ -85,14 +85,6 @@ final class HelperTests: XCTestCase {
         let model = HelperVoicesModel(library: lib)
         XCTAssertEqual(model.entry(own.id)?.origin, .recorded)
         XCTAssertEqual(model.entry(designed.id)?.origin, .designed)
-        XCTAssertEqual(model.entry("de-helga")?.origin, .builtIn)
-        XCTAssertEqual(model.entries.filter { $0.origin == .builtIn }.count, 20)
-
-        // Eingebaute: nie löschen, nie umbenennen.
-        XCTAssertThrowsError(try model.delete(id: "de-helga")) { XCTAssertEqual($0 as? HelperVoiceError, .notEditable) }
-        XCTAssertThrowsError(try model.rename(id: "de-helga", to: "X"))
-        XCTAssertNotNil(model.entry("de-helga"))
-        XCTAssertNotNil(lib.store.preset(id: "de-helga"))
 
         // Umbenennen und Löschen eigener und beschriebener Stimmen.
         try model.rename(id: own.id, to: "  Omas Stimme ")
@@ -108,15 +100,14 @@ final class HelperTests: XCTestCase {
         XCTAssertThrowsError(try model.delete(id: "own-gibtsnicht"))
     }
 
-    func testSampleURLForOwnAndBuiltInVoices() throws {
-        let lib = VoiceLibrary(directory: repo.appending(path: "Resources/Voices"), customDirectory: dir.appending(path: "c"))
-        let own = try XCTUnwrap(lib.store.custom).save(
+    func testSampleURLOfOwnVoice() throws {
+        let lib = VoiceLibrary(customDirectory: dir.appending(path: "c"))
+        let own = try lib.store.custom.save(
             samples: [Float](repeating: 0.1, count: 24_000), sampleRate: 24_000, transcript: "Guten Tag.", name: "Oma",
             language: .de, consent: true, source: "recording", transcriptSource: "reading")
         let model = HelperVoicesModel(library: lib)
         XCTAssertEqual(model.sampleURL(for: own.id)?.lastPathComponent, "\(own.id).caf")
-        // Fertige Stimmen haben nur dann eine Probe, wenn die Aufnahme da ist (hier: Datei vorhanden oder nil).
-        if let url = model.sampleURL(for: "de-helga") { XCTAssertTrue(FileManager.default.fileExists(atPath: url.path)) }
+        XCTAssertNil(model.sampleURL(for: "own-gibtsnicht"))
     }
 
     // MARK: Hörbücher und Protokoll
@@ -124,7 +115,7 @@ final class HelperTests: XCTestCase {
     private func makeFinishedProject(_ store: ProjectStore, title: String, finished: Bool = true) async throws -> Project {
         let chunks = (1...2).map { Chunk(index: $0, text: "Satz \($0).", spokenText: "Satz \($0).", kind: .sentence, chapter: 0) }
         let p = try await store.create(
-            title: title, sourceHash: UUID().uuidString, sourceKind: "text", language: .de, voiceID: "de-helga", chunks: chunks)
+            title: title, sourceHash: UUID().uuidString, sourceKind: "text", language: .de, voiceID: "own-demo", chunks: chunks)
         for i in 1...2 {
             try store.chunkStore(for: p.id).write([Float](repeating: 0.1, count: 24_000), sampleRate: 24_000, index: i)
             try await store.markChunkDone(id: p.id, chunkIndex: i, duration: 1)

@@ -98,7 +98,7 @@ enum HelperDemos {
         func make(_ title: String, _ texts: [String], finished: Bool) async -> Project? {
             guard let p = try? await store.create(
                 title: title, sourceHash: UUID().uuidString, sourceKind: "pdf", sourceData: Data(repeating: 1, count: 80_000),
-                sourceExtension: "pdf", language: .de, voiceID: "de-helga", chunks: chunks(texts)) else { return nil }
+                sourceExtension: "pdf", language: .de, voiceID: "own-demo", chunks: chunks(texts)) else { return nil }
             for i in 1...texts.count {
                 _ = try? store.chunkStore(for: p.id).write(tone, sampleRate: 24_000, index: i)
                 _ = try? await store.markChunkDone(id: p.id, chunkIndex: i, duration: 12)
@@ -124,7 +124,8 @@ enum HelperDemos {
         if let p = await make("Zeitung: Gemeinderat beschließt Radweg", ["Der Gemeinderat hat am Montagabend mit großer Mehrheit den Bau beschlossen.", "Die Kosten betragen 19,99 Euro je Meter."], finished: false) {
             _ = try? await store.markChunkFailed(id: p.id, chunkIndex: 2, error: "Nicht-endlicher Wert im Signal (NaN)")
         }
-        if let custom = model.library.store.custom {
+        do {
+            let custom = model.library.store.custom
             _ = try? custom.save(
                 samples: tone, sampleRate: 24_000, transcript: "Lesetext.", name: "Omas Stimme", language: .de,
                 consent: true, source: "recording", transcriptSource: "reading")

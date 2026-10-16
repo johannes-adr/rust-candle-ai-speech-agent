@@ -17,8 +17,6 @@ struct AudiobookJob: Sendable {
     var language: Language
     var voiceID: String
     var voiceName: String
-    /// Stil-Kennung (`calm`, `happy`, `fairytale`, `factual`), bei eigener Stimme nil.
-    var style: String?
     /// 0,8 … 1,2
     var tempo: Double
     /// Gesetzt: dort weitermachen, `document` wird ignoriert.
@@ -65,10 +63,10 @@ protocol AudiobookService: Sendable {
     func resume() async
     /// Bricht ab; bereits Fertiges bleibt auf der Platte (Fortsetzen möglich).
     func cancel() async
-    /// Gibt es eine Hörprobe für diese Stimme und diesen Stil?
-    func hasSample(voiceID: String, style: String) -> Bool
+    /// Gibt es eine Hörprobe (die Aufnahme der Stimme)?
+    func hasSample(voiceID: String) -> Bool
     /// Spielt die Hörprobe ab (sofort, ohne Modell).
-    func playSample(voiceID: String, style: String) async throws
+    func playSample(voiceID: String) async throws
     func stopSample() async
     /// „Schon mal reinhören“: spielt das bisher Fertige ab.
     func listenAhead() async throws

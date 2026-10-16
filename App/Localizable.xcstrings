@@ -988,23 +988,6 @@
         }
       }
     },
-    "describeVoice.custom": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eigener Wunsch …"
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pedido próprio …"
-          }
-        }
-      }
-    },
     "describeVoice.dictate": {
       "extractionState": "manual",
       "localizations": {
@@ -1324,23 +1307,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tentar de novo"
-          }
-        }
-      }
-    },
-    "describeVoice.styleHint": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Diese Stimme klingt so, wie Sie sie beschrieben haben. Der Stil steckt schon darin."
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esta voz soa como a descreveu. O estilo já está incluído."
           }
         }
       }
@@ -2943,40 +2909,6 @@
         }
       }
     },
-    "helper.voices.builtIn": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fertige Stimmen"
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vozes incluídas"
-          }
-        }
-      }
-    },
-    "helper.voices.origin.builtIn": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "fertig"
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "incluída"
-          }
-        }
-      }
-    },
     "helper.voices.origin.designed": {
       "extractionState": "manual",
       "localizations": {
@@ -3721,23 +3653,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "A gravação é demasiado curta. Por favor, leia o texto todo."
-          }
-        }
-      }
-    },
-    "ownVoice.honest": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ihre Stimme klingt so, wie Sie sie aufgenommen haben. Sprechen Sie fröhlich, klingt es fröhlich. Das Tempo können Sie trotzdem ändern."
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A sua voz soa como a gravou. Se falar com alegria, soará alegre. Mesmo assim, pode alterar a velocidade."
           }
         }
       }
@@ -4734,13 +4649,13 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Für diese Stimme fehlt noch die Aufnahme. Bitte wählen Sie eine andere Stimme."
+            "value": "Diese Stimme gibt es nicht mehr. Bitte wählen Sie eine andere Stimme."
           }
         },
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "Falta ainda a gravação desta voz. Escolha, por favor, outra voz."
+            "value": "Esta voz já não existe. Escolha, por favor, outra voz."
           }
         }
       }
@@ -6445,74 +6360,6 @@
         }
       }
     },
-    "style.calm": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ruhig"
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Calma"
-          }
-        }
-      }
-    },
-    "style.factual": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sachlich"
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Objetiva"
-          }
-        }
-      }
-    },
-    "style.fairytale": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wie ein Märchen"
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Como um conto"
-          }
-        }
-      }
-    },
-    "style.happy": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fröhlich"
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alegre"
-          }
-        }
-      }
-    },
     "tempo.faster": {
       "extractionState": "manual",
       "localizations": {
@@ -6717,19 +6564,104 @@
         }
       }
     },
-    "voice.noVoices": {
+    "voice.empty.title": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Für diese Sprache gibt es noch keine Stimmen."
+            "value": "Noch keine Stimme"
           }
         },
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "Para este idioma ainda não há vozes."
+            "value": "Ainda sem voz"
+          }
+        }
+      }
+    },
+    "voice.empty.text": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nehmen Sie zuerst Ihre eigene Stimme auf oder beschreiben Sie eine Stimme. Danach kann das Vorlesen beginnen."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grave primeiro a sua própria voz ou descreva uma voz. Depois a leitura pode começar."
+          }
+        }
+      }
+    },
+    "voice.needVoice": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zum Vorlesen brauchen wir zuerst eine Stimme."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para ler em voz alta precisamos primeiro de uma voz."
+          }
+        }
+      }
+    },
+    "voice.describe.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stimme beschreiben"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descrever uma voz"
+          }
+        }
+      }
+    },
+    "voice.describe.sub": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sagen Sie, wie die Stimme klingen soll"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diga como a voz deve soar"
+          }
+        }
+      }
+    },
+    "voice.describe.button": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beschreiben"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descrever"
           }
         }
       }
@@ -6819,23 +6751,6 @@
         }
       }
     },
-    "voice.sampleSoon": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die Hörproben kommen in Kürze."
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "As amostras de voz chegam em breve."
-          }
-        }
-      }
-    },
     "voice.selected": {
       "extractionState": "manual",
       "localizations": {
@@ -6866,23 +6781,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ler em voz alta"
-          }
-        }
-      }
-    },
-    "voice.styleQuestion": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wie soll es klingen?"
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Como deve soar?"
           }
         }
       }

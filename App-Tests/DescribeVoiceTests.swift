@@ -165,7 +165,7 @@ final class DescribeVoiceTests: XCTestCase {
         }
     }
 
-    func testDesignedVoiceHasNoStyle() throws {
+    func testDesignedVoiceName() throws {
         let dir = FileManager.default.temporaryDirectory.appending(path: "vorleser-test-\(UUID())")
         defer { try? FileManager.default.removeItem(at: dir) }
         let rate = 24_000.0
@@ -175,12 +175,7 @@ final class DescribeVoiceTests: XCTestCase {
         let app = AppModel(
             settings: AppSettings(defaults: UserDefaults(suiteName: "de.vorleser.tests.describe")!),
             library: VoiceLibrary(customDirectory: dir), storeRoot: dir.appending(path: "p"))
-        XCTAssertNil(app.styleKey(forVoice: voice.id, style: .calm))
-        XCTAssertTrue(app.isDesignedVoice(voice.id))
         XCTAssertEqual(app.voiceName(voice.id), "Oma")
-        XCTAssertEqual(app.styleKey(forVoice: "de-helga", style: .happy), "happy")
-        XCTAssertEqual(app.styleKey(forVoice: nil, style: .calm), "calm")
-        XCTAssertFalse(app.isDesignedVoice("own-unbekannt"))
     }
 
     /// Systemübersetzer: nur wenn das Sprachpaket installiert ist, sonst übersprungen.

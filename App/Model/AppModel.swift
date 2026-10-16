@@ -52,7 +52,6 @@ struct Draft {
     var detection: LanguageDetection?
     var language: Language
     var voiceID: String?
-    var style: VoiceStyle = .calm
     var tempo: Tempo = .normal
 
     /// Geschätzte Länge des fertigen Hörbuchs in Sekunden (Zeichen ÷ Sprechrate ÷ Tempo).
@@ -271,21 +270,18 @@ final class AppModel {
     }
 
     func selectVoice(_ id: String) { draft?.voiceID = id }
-    func selectStyle(_ style: VoiceStyle) { draft?.style = style }
     func selectTempo(_ tempo: Tempo) { draft?.tempo = tempo }
 
     func playSample(voiceID: String) {
-        guard let style = draft?.style else { return }
         sampleMessage = nil
         Task {
-            do { try await service.playSample(voiceID: voiceID, style: style.rawValue) }
+            do { try await service.playSample(voiceID: voiceID) }
             catch { sampleMessage = "voice.sampleMissing" }
         }
     }
 
     func hasSample(voiceID: String) -> Bool {
-        guard let style = draft?.style else { return false }
-        return service.hasSample(voiceID: voiceID, style: style.rawValue)
+        service.hasSample(voiceID: voiceID)
     }
 
     func chooseOwnVoice() { startOwnVoice() }
@@ -298,7 +294,7 @@ final class AppModel {
         let job = AudiobookJob(
             title: d.title, document: d.document, sourceHash: d.sourceHash, sourceKind: d.sourceKind,
             sourceData: d.sourceData, sourceExtension: d.sourceExtension, language: d.language,
-            voiceID: voiceID, voiceName: voiceName, style: styleKey(forVoice: voiceID, style: d.style), tempo: d.tempo.factor,
+            voiceID: voiceID, voiceName: voiceName, tempo: d.tempo.factor,
             resumeProjectID: nil, writeChapterFiles: settings.chaptersAsFiles)
         instantPlayback = d.isShort
         AppLog.info("work", "Start: \(d.language.rawValue), \(d.document.blocks.count) Blöcke, Stimme \(voiceID), Tempo \(d.tempo.factor), Qualität \(settings.quality.rawValue)")
@@ -409,7 +405,7 @@ final class AppModel {
                 let job = AudiobookJob(
                     title: p.title, document: TextDocument(blocks: []), sourceHash: p.sourceHash,
                     sourceKind: p.sourceKind, sourceData: nil, sourceExtension: nil, language: p.language,
-                    voiceID: p.voiceID, voiceName: voiceName(p.voiceID), style: p.style,
+                    voiceID: p.voiceID, voiceName: voiceName(p.voiceID),
                     tempo: p.tempo, resumeProjectID: p.id, writeChapterFiles: settings.chaptersAsFiles)
                 run(job)
             }

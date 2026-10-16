@@ -60,7 +60,7 @@ actor PreviewAudiobookService: AudiobookService {
                 project = try await store.create(
                     title: job.title, sourceHash: job.sourceHash, sourceKind: job.sourceKind,
                     sourceData: job.sourceData, sourceExtension: job.sourceExtension,
-                    language: job.language, voiceID: job.voiceID, style: job.style, tempo: job.tempo,
+                    language: job.language, voiceID: job.voiceID, style: nil, tempo: job.tempo,
                     chunks: chunks)
             }
             currentProjectID = project.id
@@ -145,12 +145,12 @@ actor PreviewAudiobookService: AudiobookService {
 
     // MARK: Proben
 
-    nonisolated func hasSample(voiceID: String, style: String) -> Bool {
-        library.referenceURL(voiceID: voiceID, style: style) != nil
+    nonisolated func hasSample(voiceID: String) -> Bool {
+        library.referenceURL(voiceID: voiceID) != nil
     }
 
-    func playSample(voiceID: String, style: String) throws {
-        guard let url = library.referenceURL(voiceID: voiceID, style: style) else { throw PreviewError.nothingToRead }
+    func playSample(voiceID: String) throws {
+        guard let url = library.referenceURL(voiceID: voiceID) else { throw PreviewError.nothingToRead }
         try play(url)
     }
 

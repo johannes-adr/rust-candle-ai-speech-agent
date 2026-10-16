@@ -35,10 +35,7 @@ targets:
       - path: App
         excludes:
           - "Info.plist"
-      # Als Ordner eingebunden, damit Voices/ und ReadAloud/ im App-Paket erhalten bleiben.
-      - path: Resources/Voices
-        type: folder
-        buildPhase: resources
+      # Als Ordner eingebunden, damit ReadAloud/ im App-Paket erhalten bleibt.
       - path: Resources/ReadAloud
         type: folder
         buildPhase: resources
