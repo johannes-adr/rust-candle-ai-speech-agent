@@ -20,7 +20,7 @@ actor LiveAudiobookService: AudiobookService {
     init(store: ProjectStore, library: VoiceLibrary, bits: ModelBits = .four, engine: (any SpeechEngine)? = nil) {
         self.store = store
         self.library = library
-        self.job = SynthesisJob(engine: engine ?? MLXQwenEngine(bits: bits), store: store)
+        self.job = SynthesisJob(engine: engine ?? (bits == .four ? SharedSpeechEngine.shared : MLXQwenEngine(bits: bits)), store: store)
     }
 
     // MARK: Erzeugen
@@ -37,7 +37,9 @@ actor LiveAudiobookService: AudiobookService {
 
     private func run(_ request: AudiobookJob, _ out: AsyncStream<AudiobookEvent>.Continuation) async {
         out.yield(.preparing)
-        guard let voice = library.store.voice(id: request.voiceID, style: request.style, fallback: true) else {
+        // Fertige Stimme aus presets.json oder selbst beschriebene (Phase 4) bzw. aufgenommene Stimme.
+        guard let voice = library.store.voice(id: request.voiceID, style: request.style, fallback: true)
+            ?? DesignedVoiceStore.standard.voice(id: request.voiceID) else {
             out.yield(.failed(reasonKey: "problem.noVoice"))
             out.finish()
             return

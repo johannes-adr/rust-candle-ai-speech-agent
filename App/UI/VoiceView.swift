@@ -12,14 +12,7 @@ struct VoiceView: View {
                 voiceCards(draft)
                 if let key = model.sampleMessage { Text(LocalizedStringKey(key)).foregroundStyle(Color.omaSecondaryText) }
 
-                Text("voice.styleQuestion").font(OmaStyle.bodyBold).padding(.top, 4)
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 250), spacing: 16)], alignment: .leading, spacing: 16) {
-                    ForEach(VoiceStyle.allCases) { style in
-                        ChoiceButton(
-                            title: LocalizedStringKey(style.titleKey), systemImage: style.symbol,
-                            selected: draft.style == style) { model.selectStyle(style) }
-                    }
-                }
+                StyleSection(draft: draft)
 
                 Text("voice.tempo").font(OmaStyle.bodyBold).padding(.top, 4)
                 HStack(spacing: 16) {
@@ -54,6 +47,7 @@ struct VoiceView: View {
         if voices.contains(where: { !model.hasSample(voiceID: $0.id) }) {
             Text("voice.sampleSoon").foregroundStyle(Color.omaSecondaryText)
         }
+        DesignedVoicesSection(draft: draft)
     }
 
     private static func tempoSymbol(_ t: Tempo) -> String {

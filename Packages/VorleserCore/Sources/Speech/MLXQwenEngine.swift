@@ -48,6 +48,12 @@ public actor MLXQwenEngine: SpeechEngine {
 
     public var loadedModel: ModelKind? { loadedKind }
 
+    /// MLX-Speicher jetzt in GB: aktiv (Gewichte, lebende Arrays), Zwischenspeicher und Spitze seit Zurücksetzen.
+    /// Nach `unload()` sollte `active` nahe 0 sein (Beleg: nie zwei Modelle zugleich).
+    public func memoryReport() -> (activeGB: Double, cacheGB: Double, peakGB: Double) {
+        (Double(Memory.activeMemory) / 1e9, Double(Memory.cacheMemory) / 1e9, Double(Memory.peakMemory) / 1e9)
+    }
+
     // MARK: Laden / Entladen
 
     public func load(_ kind: ModelKind) async throws {

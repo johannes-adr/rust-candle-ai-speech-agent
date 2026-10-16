@@ -56,7 +56,11 @@ let package = Package(
             dependencies: [
                 "DocumentImport", "TextPrep", "Speech", "AudioOut", "Projects", "Pipeline",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
-            ]
+            ],
+            // SwiftPM verlinkt gegen SDK 26.0; damit meldet das Translation-Framework installierte
+            // Sprachpakete als „supported“ statt „installed“ (gemessen, docs/phase4.md). Die App
+            // (xcodebuild, SDK 27) ist nicht betroffen. Nur für die Kommandozeile.
+            linkerSettings: [.unsafeFlags(["-Xlinker", "-platform_version", "-Xlinker", "macos", "-Xlinker", "26.0", "-Xlinker", "27.0"])]
         ),
         // Spike S4: liest einen Ordner mit PDFs und schreibt die erkannten Blöcke als .txt.
         .executableTarget(name: "spike-s4", dependencies: ["DocumentImport", "TextPrep"]),

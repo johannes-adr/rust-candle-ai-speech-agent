@@ -14,6 +14,8 @@ enum Screen: Equatable {
     case importing
     case voice
     case comingSoon
+    /// Stimme beschreiben (Phase 4, App/DescribeVoice)
+    case describeVoice
     case working
     case done
     /// Freundliche Fehlermeldung (Schlüssel aus Localizable.xcstrings).
@@ -70,6 +72,8 @@ final class AppModel {
     var screen: Screen = .start
     var typedText = ""
     var draft: Draft?
+    /// Ablauf „Stimme beschreiben“ (App/DescribeVoice), nur auf dem Bildschirm `.describeVoice` belegt.
+    var describe: DescribeVoiceModel?
     var projects: [ProjectSummary] = []
 
     // Overlays (eigene große Dialoge statt kleiner Systemfenster)
@@ -278,11 +282,11 @@ final class AppModel {
 
     func startWork() {
         guard let d = draft, let voiceID = d.voiceID else { return }
-        let voiceName = library.voice(id: voiceID)?.name ?? ""
+        let voiceName = self.voiceName(voiceID)
         let job = AudiobookJob(
             title: d.title, document: d.document, sourceHash: d.sourceHash, sourceKind: d.sourceKind,
             sourceData: d.sourceData, sourceExtension: d.sourceExtension, language: d.language,
-            voiceID: voiceID, voiceName: voiceName, style: d.style.rawValue, tempo: d.tempo.factor,
+            voiceID: voiceID, voiceName: voiceName, style: styleKey(forVoice: voiceID, style: d.style), tempo: d.tempo.factor,
             resumeProjectID: nil)
         instantPlayback = d.isShort
         run(job)
@@ -390,7 +394,7 @@ final class AppModel {
                 let job = AudiobookJob(
                     title: p.title, document: TextDocument(blocks: []), sourceHash: p.sourceHash,
                     sourceKind: p.sourceKind, sourceData: nil, sourceExtension: nil, language: p.language,
-                    voiceID: p.voiceID, voiceName: library.voice(id: p.voiceID)?.name ?? "", style: p.style,
+                    voiceID: p.voiceID, voiceName: voiceName(p.voiceID), style: p.style,
                     tempo: p.tempo, resumeProjectID: p.id)
                 run(job)
             }
