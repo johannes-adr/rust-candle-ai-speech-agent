@@ -8,7 +8,7 @@ import AVFoundation
 import Darwin
 import Foundation
 import Projects
-import Speech
+import VorleserSpeech
 import TextPrep
 
 // MARK: Hilfen

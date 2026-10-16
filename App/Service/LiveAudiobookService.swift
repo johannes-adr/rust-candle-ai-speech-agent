@@ -4,7 +4,7 @@ import AVFoundation
 import Foundation
 import Pipeline
 import Projects
-import Speech
+import VorleserSpeech
 import TextPrep
 
 enum LiveError: Error { case nothingToRead }

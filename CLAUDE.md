@@ -23,7 +23,8 @@ was du in jeder Sitzung brauchst.
 - `Packages/VorleserCore` (SwiftPM, ohne UI) enthält:
   - `DocumentImport`: PDFKit/Vision/NSAttributedString
   - `TextPrep`: Bereinigung, Normalizer je Sprache, ChunkPlanner
-  - `Speech`: `SpeechEngine`-Actor über MLX
+  - `Speech` (Modul heißt `VorleserSpeech`, wegen Apples Speech-Framework): `SpeechEngine`-Actor über MLX, `VoiceStore`, `RecordedVoiceStore`
+  - `VoiceCapture`: Mikrofon-Aufnahme, Pegel-/Rauschprüfung, Spracherkennungs-Check, Audio-Import (Phase 3)
   - `AudioOut`: QC, Pausen, Lautheit, Tempo, 44,1-kHz-Resampling, LAME
   - `Projects`: Manifest, Fortsetzen
   - `vorleser-cli`

@@ -4,12 +4,14 @@
 //   vorleser-cli voices
 //   vorleser-cli design-presets <Ordner> [--lang de] [--voice de-helga] [--style calm]
 //   vorleser-cli adopt-presets <Ordner>
+//   vorleser-cli import-voice <Datei> --lang de --name "Oma" --consent   (Phase 3)
+//   vorleser-cli delete-voice <id>
 import ArgumentParser
 import DocumentImport
 import Foundation
 import Pipeline
 import Projects
-import Speech
+import VorleserSpeech
 import TextPrep
 
 @main
@@ -17,7 +19,7 @@ struct Vorleser: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "vorleser-cli",
         abstract: "Wandelt PDF oder Text in eine MP3 um (Qwen3-TTS, lokal).",
-        subcommands: [Read.self, Voices.self, DesignPresets.self, AdoptPresets.self],
+        subcommands: [Read.self, Voices.self, DesignPresets.self, AdoptPresets.self, ImportVoice.self, DeleteVoice.self, CheckReading.self],
         defaultSubcommand: Read.self)
 }
 
@@ -110,7 +112,7 @@ struct Read: AsyncParsableCommand {
         let usedStyle = voices.availableStyles(voiceID: chosen.id).first {
             voices.referenceURL(voiceID: chosen.id, style: $0)?.path == chosen.referenceAudio.path
         }
-        if usedStyle != styleKey { err("Hinweis: Stil \(styleKey) fehlt für \(chosen.id), genommen wird \(usedStyle ?? "?").") }
+        if chosen.kind != .recorded, usedStyle != styleKey { err("Hinweis: Stil \(styleKey) fehlt für \(chosen.id), genommen wird \(usedStyle ?? "?").") }
 
         let store: ProjectStore
         if let workDir {
@@ -206,6 +208,12 @@ struct Voices: ParsableCommand {
         for p in store.allPresets {
             let have = store.availableStyles(voiceID: p.id)
             print("\(p.id.padding(toLength: 12, withPad: " ", startingAt: 0)) \(p.name.padding(toLength: 8, withPad: " ", startingAt: 0)) \(p.language.rawValue)  Referenzen: \(have.isEmpty ? "–" : have.joined(separator: ", "))")
+        }
+        if let custom = store.custom {
+            print("Eigene Stimmen (\(custom.directory.path)):")
+            for v in custom.list() {
+                print("\(v.id.padding(toLength: 12, withPad: " ", startingAt: 0)) \(v.name.padding(toLength: 8, withPad: " ", startingAt: 0)) \(v.language.rawValue)  \(v.source), \(String(format: "%.1f", v.durationSeconds)) s")
+            }
         }
     }
 }

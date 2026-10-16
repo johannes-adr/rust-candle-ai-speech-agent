@@ -52,9 +52,11 @@ targets:
       - package: VorleserCore
         product: Projects
       - package: VorleserCore
-        product: Speech
+        product: VorleserSpeech
       - package: VorleserCore
         product: Pipeline
+      - package: VorleserCore
+        product: VoiceCapture
     info:
       path: App/Info.plist
       properties:
