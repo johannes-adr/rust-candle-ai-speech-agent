@@ -1,7 +1,14 @@
-/target
-/models
-/out
-*.wav
-*.m4a
 .DS_Store
-/voices
+xcuserdata/
+DerivedData/
+.build/
+.swiftpm/
+/build/
+
+# XcodeGen erzeugt das Projekt aus project.yml
+*.xcodeproj/
+
+# Modelle und Test-Ausgaben gehören nicht ins Repo
+/models/
+/out/
+/spike-output/
