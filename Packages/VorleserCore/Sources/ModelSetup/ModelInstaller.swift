@@ -14,6 +14,17 @@ public struct InstallProgress: Sendable, Equatable {
     public var currentFile: String?
     public var currentModel: ModelRef?
 
+    public init(phase: Phase, bytesDone: Int64, bytesTotal: Int64, bytesPerSecond: Double = 0,
+                remainingSeconds: Double? = nil, currentFile: String? = nil, currentModel: ModelRef? = nil) {
+        self.phase = phase
+        self.bytesDone = bytesDone
+        self.bytesTotal = bytesTotal
+        self.bytesPerSecond = bytesPerSecond
+        self.remainingSeconds = remainingSeconds
+        self.currentFile = currentFile
+        self.currentModel = currentModel
+    }
+
     public var fraction: Double { bytesTotal > 0 ? min(1, Double(bytesDone) / Double(bytesTotal)) : 1 }
     public var percent: Int { Int((fraction * 100).rounded(.down)) }
 }
@@ -55,6 +66,14 @@ public struct InstallPlan: Sendable, Equatable {
     public var downloadBytes: Int64
     /// Neuer Platzbedarf auf dem Datenträger (Download plus nicht klonbarer Import).
     public var space: SpaceCheck
+
+    public init(totalBytes: Int64, presentBytes: Int64, importBytes: Int64, downloadBytes: Int64, space: SpaceCheck) {
+        self.totalBytes = totalBytes
+        self.presentBytes = presentBytes
+        self.importBytes = importBytes
+        self.downloadBytes = downloadBytes
+        self.space = space
+    }
 
     public var isComplete: Bool { totalBytes == presentBytes }
 }
