@@ -2229,6 +2229,448 @@
         }
       }
     },
+    "helper.model.bits.bf16": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bf16: beste Qualität, am größten"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bf16: melhor qualidade, o maior"
+          }
+        }
+      }
+    },
+    "helper.model.bits.q4": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "4 Bit: klein und schnell"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "4 bits: pequeno e rápido"
+          }
+        }
+      }
+    },
+    "helper.model.bits.q5": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5 Bit: mittlere Größe"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5 bits: tamanho médio"
+          }
+        }
+      }
+    },
+    "helper.model.bits.q6": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "6 Bit: größer, genauer"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "6 bits: maior, mais preciso"
+          }
+        }
+      }
+    },
+    "helper.model.bits.q8": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "8 Bit: groß, genauer"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "8 bits: grande, mais preciso"
+          }
+        }
+      }
+    },
+    "helper.model.cancel": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abbrechen"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancelar"
+          }
+        }
+      }
+    },
+    "helper.model.checking": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modell wird geprüft …"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A verificar o modelo …"
+          }
+        }
+      }
+    },
+    "helper.model.chosen": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Von Ihnen gewählt"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolhido por si"
+          }
+        }
+      }
+    },
+    "helper.model.current": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktuell"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atual"
+          }
+        }
+      }
+    },
+    "helper.model.customOption": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eigenes Repo (unten eingeben)"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repositório próprio (escrever abaixo)"
+          }
+        }
+      }
+    },
+    "helper.model.defaultUsed": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eingebauter Standard"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Padrão incluído na aplicação"
+          }
+        }
+      }
+    },
+    "helper.model.details": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version %@, Größe %@, %@"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "versão %@, tamanho %@, %@"
+          }
+        }
+      }
+    },
+    "helper.model.done": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das neue Modell ist eingerichtet. Es wird beim nächsten Vorlesen geladen."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O novo modelo está configurado. Será carregado na próxima leitura."
+          }
+        }
+      }
+    },
+    "helper.model.info": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Größe %@, auf dem Datenträger frei: %@."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tamanho %@, livre no disco: %@."
+          }
+        }
+      }
+    },
+    "helper.model.intro": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hier wählen Sie das Sprachmodell. Ein neues Modell wird erst benutzt, wenn es vollständig geladen und geprüft ist. Geladen wird nur auf Knopfdruck."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha aqui o modelo de voz. Um modelo novo só é usado depois de transferido e verificado por completo. A transferência só começa ao carregar no botão."
+          }
+        }
+      }
+    },
+    "helper.model.load": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prüfen und laden"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verificar e transferir"
+          }
+        }
+      }
+    },
+    "helper.model.pick": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorschlag"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sugestão"
+          }
+        }
+      }
+    },
+    "helper.model.progress": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld %% geladen"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld %% transferido"
+          }
+        }
+      }
+    },
+    "helper.model.qualityNote": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ist ein eigenes Modell gewählt, gilt die Einstellung „Genauigkeit der Sprachausgabe“ nicht."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Com um modelo próprio escolhido, a “Precisão da leitura em voz alta” não se aplica."
+          }
+        }
+      }
+    },
+    "helper.model.repoLabel": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hugging-Face-Repo"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repositório Hugging Face"
+          }
+        }
+      }
+    },
+    "helper.model.reset": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zurück zum Standard"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voltar ao padrão"
+          }
+        }
+      }
+    },
+    "helper.model.resetDone": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wieder der eingebaute Standard."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Novamente o padrão incluído na aplicação."
+          }
+        }
+      }
+    },
+    "helper.model.role.base": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorlesen und Klonen"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leitura e clonagem"
+          }
+        }
+      }
+    },
+    "helper.model.role.voiceDesign": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stimme beschreiben"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descrever a voz"
+          }
+        }
+      }
+    },
+    "helper.model.size.large": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1,7 B: besser, langsamer"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1,7 B: melhor, mais lento"
+          }
+        }
+      }
+    },
+    "helper.model.size.small": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0,6 B: schneller, etwas schlechter"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0,6 B: mais rápido, um pouco pior"
+          }
+        }
+      }
+    },
     "helper.quality.accurate": {
       "extractionState": "manual",
       "localizations": {
@@ -2412,6 +2854,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Registos"
+          }
+        }
+      }
+    },
+    "helper.tab.model": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modell"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelo"
           }
         }
       }
