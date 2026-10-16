@@ -34,11 +34,15 @@ public struct SynthesisRequest: Sendable {
     /// Bei `.document`: Originaldatei, die im Projekt abgelegt werden soll.
     public var sourceData: Data?
     public var sourceExtension: String?
+    /// Bei Büchern mit mehreren Kapiteln zusätzlich einen Ordner mit einer MP3 je Kapitel schreiben
+    /// (Einstellung „Kapitel zusätzlich als einzelne Dateien“).
+    public var writeChapterFiles: Bool
 
     public init(
         title: String? = nil, source: SynthesisSource, language: Language? = nil, voice: Voice,
         style: String? = nil, tempo: Double = 1.0, outputURL: URL? = nil, resumeProjectID: UUID? = nil,
-        pageCount: Int? = nil, sourceData: Data? = nil, sourceExtension: String? = nil
+        pageCount: Int? = nil, sourceData: Data? = nil, sourceExtension: String? = nil,
+        writeChapterFiles: Bool = true
     ) {
         self.title = title
         self.source = source
@@ -51,6 +55,7 @@ public struct SynthesisRequest: Sendable {
         self.pageCount = pageCount
         self.sourceData = sourceData
         self.sourceExtension = sourceExtension
+        self.writeChapterFiles = writeChapterFiles
     }
 }
 
