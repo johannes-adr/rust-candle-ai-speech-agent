@@ -17,7 +17,9 @@ let package = Package(
     dependencies: [],
     targets: [
         .target(name: "TextPrep"),
-        .target(name: "DocumentImport", dependencies: ["TextPrep"]),
+        // VORLÄUFIG (Merge: wieder auf dependencies: ["TextPrep"] zurückdrehen,
+        // siehe Sources/DocumentImport/TextDocumentShim.swift).
+        .target(name: "DocumentImport"),
         .target(name: "Speech", dependencies: ["TextPrep"]),
         // LAME 3.100 (LGPL) als eigenes C-Target, nur Encoder. Siehe docs/spikes/S5-mp3.md.
         .target(
@@ -35,8 +37,14 @@ let package = Package(
             name: "vorleser-cli",
             dependencies: ["DocumentImport", "TextPrep", "Speech", "AudioOut", "Projects"]
         ),
+        // Spike S4: liest einen Ordner mit PDFs und schreibt die erkannten Blöcke als .txt.
+        .executableTarget(name: "spike-s4", dependencies: ["DocumentImport"]),
         .testTarget(name: "TextPrepTests", dependencies: ["TextPrep"]),
-        .testTarget(name: "DocumentImportTests", dependencies: ["DocumentImport"]),
+        .testTarget(
+            name: "DocumentImportTests",
+            dependencies: ["DocumentImport"],
+            resources: [.copy("Fixtures")]
+        ),
         .testTarget(name: "SpeechTests", dependencies: ["Speech"]),
         .testTarget(name: "AudioOutTests", dependencies: ["AudioOut"]),
         .testTarget(name: "ProjectsTests", dependencies: ["Projects"]),
