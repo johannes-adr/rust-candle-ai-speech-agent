@@ -22,6 +22,17 @@ public enum AudioResampler {
             throw SpeechAudioError.emptyAudio
         }
         try file.read(into: buffer)
+        // AVAudioFile liefert bei manchen Dateien weniger als angefragt; nachlesen.
+        while buffer.frameLength < frames, file.framePosition < file.length {
+            guard let rest = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames - buffer.frameLength) else { break }
+            try file.read(into: rest)
+            if rest.frameLength == 0 { break }
+            let ch = Int(format.channelCount)
+            for c in 0..<ch {
+                (buffer.floatChannelData![c] + Int(buffer.frameLength)).update(from: rest.floatChannelData![c], count: Int(rest.frameLength))
+            }
+            buffer.frameLength += rest.frameLength
+        }
         let channels = Int(format.channelCount)
         let n = Int(buffer.frameLength)
         var mono = [Float](repeating: 0, count: n)

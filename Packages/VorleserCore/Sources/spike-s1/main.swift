@@ -67,8 +67,8 @@ struct LangSet { let lang: Language; let description: String; let refText: Strin
 let sets: [LangSet] = [
     LangSet(
         lang: .de,
-        description: "A calm, warm elderly woman's voice with a clear native German accent, speaking slowly and clearly, like a gentle storyteller.",
-        refText: "Guten Tag, ich bin Ihre Vorleserin. Ich lese Ihnen heute gerne einen Brief, eine Geschichte oder einen Zeitungsartikel vor, ganz in Ruhe und so deutlich, dass Sie jedes Wort gut verstehen können.",
+        description: "A calm, warm elderly woman's voice with a clear native German accent, speaking clearly, like a gentle storyteller.",
+        refText: "Guten Tag, ich bin Ihre Vorleserin. Ich lese Ihnen heute gerne einen Brief oder eine Geschichte vor, ganz in Ruhe.",
         chunks: [
             "Der Herbst kam in diesem Jahr früher als erwartet. Schon Ende September färbten sich die Blätter der alten Linde vor dem Haus gelb und rot, und jeden Morgen lag ein dünner Nebel über den Wiesen. Anna stand am Fenster, hielt ihre Tasse Tee in beiden Händen und sah zu, wie der Postbote langsam die Straße herunterkam.",
             "Er brachte einen Brief, auf den sie schon seit Wochen gewartet hatte. Der Umschlag war dick und trug eine fremde Briefmarke. Sie setzte sich an den Küchentisch, öffnete ihn vorsichtig mit dem Messer und begann zu lesen. Mit jeder Zeile wurde ihr Lächeln breiter, denn die Nachricht war besser, als sie zu hoffen gewagt hatte.",
@@ -76,8 +76,8 @@ let sets: [LangSet] = [
         ]),
     LangSet(
         lang: .pt,
-        description: "A calm, warm elderly woman's voice with a clear native Brazilian Portuguese accent, speaking slowly and clearly, like a gentle storyteller.",
-        refText: "Bom dia, eu sou a sua leitora. Hoje vou ler para você uma carta, uma história ou um artigo de jornal, com calma e com clareza, para que você entenda cada palavra.",
+        description: "A calm, warm elderly woman's voice with a clear native Brazilian Portuguese accent, speaking clearly, like a gentle storyteller.",
+        refText: "Bom dia, eu sou a sua leitora. Hoje vou ler para você uma carta ou uma história, com muita calma.",
         chunks: [
             "O outono chegou mais cedo neste ano. Já no fim de setembro as folhas da velha tília em frente à casa ficaram amarelas e vermelhas, e todas as manhãs uma névoa fina cobria os campos. Ana ficou parada junto à janela, segurando a xícara de chá com as duas mãos, e viu o carteiro descer devagar a rua.",
             "Ele trazia uma carta que ela esperava havia semanas. O envelope era grosso e tinha um selo estrangeiro. Ela sentou-se à mesa da cozinha, abriu-o com cuidado usando a faca e começou a ler. A cada linha o seu sorriso ficava maior, porque a notícia era melhor do que ela tinha ousado esperar.",

@@ -62,11 +62,12 @@ public actor MLXQwenEngine: SpeechEngine {
     }
 
     public func unload() async {
+        let hadModel = model != nil
         model = nil
         loadedKind = nil
         prompts.removeAll()
         sampleRate = 0
-        Memory.clearCache()
+        if hadModel { Memory.clearCache() }
     }
 
     // MARK: Stimme vorbereiten
