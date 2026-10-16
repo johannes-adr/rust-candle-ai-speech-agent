@@ -1,0 +1,23 @@
+# Zahlen
+Nella città vivono 1.250.000 persone.
+Il risultato è stato del 3,75 per cento.
+È nata nel 1984 e si è trasferita a Roma nel 2019.
+La risposta è a pagina 237.
+
+# Datum und Uhrzeit
+Il primo appuntamento è stato il 3/5/2024.
+La riunione inizia il 24 dicembre alle 18:30.
+Il treno parte alle 7:05 e arriva alle 14:45.
+
+# Geld und Einheiten
+Il libro costa 12,50 € e la rivista 3 €.
+L'auto va a 120 km/h con 21 °C.
+Il pacco pesa 2,5 kg.
+
+# Abkürzungen, Telefon
+Questo vale, ad es., per il Dott. Rossi e la Sig.ra Bianchi, ecc.
+Chiami lo 06 1234567 o scriva a info@esempio.it.
+
+# Fremdwörter, URLs
+La riunione in ufficio si è tenuta su Zoom.
+Lei lavora in una start-up a Milano.
