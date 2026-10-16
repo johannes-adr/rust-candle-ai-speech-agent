@@ -165,11 +165,29 @@ final class DescribeVoiceTests: XCTestCase {
         }
     }
 
-    func testDesignedVoiceHasNoStyle() {
-        let app = AppModel(settings: AppSettings(defaults: UserDefaults(suiteName: "de.vorleser.tests.describe")!),
-                           storeRoot: FileManager.default.temporaryDirectory.appending(path: "vorleser-test-\(UUID())"))
-        XCTAssertNil(app.styleKey(forVoice: "designed-ab12cd34", style: .calm))
+    func testDesignedVoiceHasNoStyle() throws {
+        let dir = FileManager.default.temporaryDirectory.appending(path: "vorleser-test-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let rate = 24_000.0
+        let tone = (0..<Int(rate)).map { Float(0.3 * sin(2 * Double.pi * 220 * Double($0) / rate)) }
+        let voice = try RecordedVoiceStore(directory: dir).saveDesigned(
+            samples: tone, sampleRate: rate, referenceText: "x", name: "Oma", language: .de, wish: "ruhig", prompt: nil, seed: nil)
+        let app = AppModel(
+            settings: AppSettings(defaults: UserDefaults(suiteName: "de.vorleser.tests.describe")!),
+            library: VoiceLibrary(customDirectory: dir), storeRoot: dir.appending(path: "p"))
+        XCTAssertNil(app.styleKey(forVoice: voice.id, style: .calm))
+        XCTAssertTrue(app.isDesignedVoice(voice.id))
+        XCTAssertEqual(app.voiceName(voice.id), "Oma")
         XCTAssertEqual(app.styleKey(forVoice: "de-helga", style: .happy), "happy")
         XCTAssertEqual(app.styleKey(forVoice: nil, style: .calm), "calm")
+        XCTAssertFalse(app.isDesignedVoice("own-unbekannt"))
+    }
+
+    /// Systemübersetzer: nur wenn das Sprachpaket installiert ist, sonst übersprungen.
+    func testSystemTranslatorWorksInAppProcess() async throws {
+        guard await SystemDescriptionTranslator.isInstalled(.de) else { throw XCTSkip("Sprachpaket de→en nicht installiert") }
+        let en = await SystemDescriptionTranslator().translateToEnglish("ruhig und warm, wie eine Großmutter", from: .de)
+        XCTAssertNotNil(en)
+        XCTAssertTrue(en?.lowercased().contains("calm") ?? false, "Übersetzung: \(en ?? "nil")")
     }
 }
