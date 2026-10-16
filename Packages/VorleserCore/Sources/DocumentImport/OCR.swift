@@ -54,11 +54,32 @@ enum OCR {
     /// Hauptweg ist `RecognizeDocumentsRequest` (macOS 26, liefert Absätze); fällt auf
     /// `VNRecognizeTextRequest` zurück, wenn er fehlschlägt oder nichts findet.
     /// - Parameter language: Kürzel des Dokuments, falls bekannt. Sonst automatische Erkennung.
-    static func recognize(image: CGImage, pageSize: CGSize, pageIndex: Int, language: String?, engine: Engine = .documents) async throws -> [PageLine] {
+    /// - Parameter edgeMargin: > 0 für Fotos: Zeilen, die vom Bildrand angeschnitten sind (Nachbarseite, Tisch,
+    ///   halbe Seitenzahl), werden verworfen (`dropEdgeLines`). 0 = nichts verwerfen (PDF-Seiten, Scans).
+    static func recognize(
+        image: CGImage, pageSize: CGSize, pageIndex: Int, language: String?, engine: Engine = .documents,
+        edgeMargin: CGFloat = 0
+    ) async throws -> [PageLine] {
         if engine == .documents, let raws = try? await recognizeDocumentRaws(image: image, pageSize: pageSize, language: language), !raws.isEmpty {
-            return finish(raws, pageSize: pageSize, pageIndex: pageIndex)
+            return finish(dropEdgeLines(raws, pageSize: pageSize, margin: edgeMargin), pageSize: pageSize, pageIndex: pageIndex)
         }
-        return finish(try recognizeTextRaws(image: image, pageSize: pageSize, language: language), pageSize: pageSize, pageIndex: pageIndex)
+        let raws = try recognizeTextRaws(image: image, pageSize: pageSize, language: language)
+        return finish(dropEdgeLines(raws, pageSize: pageSize, margin: edgeMargin), pageSize: pageSize, pageIndex: pageIndex)
+    }
+
+    /// Verwirft Zeilen, die den Bildrand (innerhalb `margin` der Bildgröße) berühren: Sie sind angeschnitten.
+    /// Berührt mehr als ein Viertel der Zeilen den Rand, ist das Foto sehr eng aufgenommen; dann bleibt alles.
+    static func dropEdgeLines(_ raws: [Raw], pageSize: CGSize, margin: CGFloat) -> [Raw] {
+        guard margin > 0, raws.count >= 4 else { return raws }
+        let mx = pageSize.width * margin, my = pageSize.height * margin
+        func touches(_ r: Raw) -> Bool {
+            let x0 = min(r.left.x, r.left.x + r.w * cos(r.angle))
+            let x1 = max(r.left.x, r.left.x + r.w * cos(r.angle))
+            let ymid = r.left.y + r.w * sin(r.angle) / 2
+            return x0 < mx || x1 > pageSize.width - mx || ymid - r.h / 2 < my || ymid + r.h / 2 > pageSize.height - my
+        }
+        let kept = raws.filter { !touches($0) }
+        return raws.count - kept.count > raws.count / 4 ? raws : kept
     }
 
     static func recognizeDocumentRaws(image: CGImage, pageSize: CGSize, language: String?) async throws -> [Raw] {
