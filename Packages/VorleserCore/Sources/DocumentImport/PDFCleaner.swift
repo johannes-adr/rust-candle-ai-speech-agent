@@ -17,7 +17,12 @@ public struct CleanerOptions: Sendable {
     public var indentFactor: CGFloat = 0.9
     /// Kürzer als dieser Anteil der Spaltenbreite = Zeile endet bewusst (Adresse, Absatzende).
     public var shortLineRatio: CGFloat = 0.6
-    public var maxHeadingLength = 120
+    /// Überschriften sind kurz; längere Zeilen mit großer Schrift sind Fließtext.
+    public var maxHeadingLength = 100
+    /// Bei OCR schwankt die Zeilenhöhe je nach Buchstaben (Ober-/Unterlängen); deshalb ein höherer Wert.
+    public var ocrHeadingSizeRatio: CGFloat = 1.2
+    /// Bei OCR zusätzlich: Überschriften sind höchstens so lang.
+    public var ocrMaxHeadingLength = 60
     public var minLinesPerColumn = 5
 
     public init() {}
@@ -52,9 +57,12 @@ public struct PDFCleaner: Sendable {
         report.bodyFontSize = Double(body)
         let bodyIsBold = boldShare(allKept) > 0.5
 
-        // 3. Spalten und Lesereihenfolge je Seite, dann Fußnoten raus
+        // 3. Tabellen (Zeilen mit mehreren Zellen, ≥ 2 Zeilen in Folge) raus, solange die Zeilen noch Zeilen sind
+        let noTables = kept.map { removeTables(page: $0, report: &report) }
+
+        // 4. Spalten und Lesereihenfolge je Seite, dann Fußnoten raus
         var stream: [OrderedLine] = []
-        for page in kept {
+        for page in noTables {
             let (ordered, twoColumns) = order(page: page)
             if twoColumns { report.twoColumnPages.append(page.index) }
             for o in ordered {
@@ -66,14 +74,12 @@ public struct PDFCleaner: Sendable {
             }
         }
 
-        // 4. Tabellen (≥ 2 aufeinanderfolgende Tabellenzeilen)
-        stream = removeTables(stream, report: &report)
-
         // 5. Blöcke bauen
         let pitch = typicalPitch(stream, body: body)
         var builder = BlockBuilder(
             options: options, body: body, bodyIsBold: bodyIsBold, pitch: pitch,
-            language: lang, checker: wordChecker
+            language: lang, checker: wordChecker,
+            ocrPages: Set(pages.filter(\.fromOCR).map(\.index))
         )
         for o in stream { builder.add(o) }
         let (blocks, hyphenJoined, hyphenKept) = builder.finish(report: &report)
@@ -164,8 +170,8 @@ public struct PDFCleaner: Sendable {
     private func typicalPitch(_ stream: [OrderedLine], body: CGFloat) -> CGFloat {
         var pitches: [CGFloat] = []
         for (a, b) in zip(stream, stream.dropFirst()) where a.line.page == b.line.page {
-            let d = a.line.rect.minY - b.line.rect.minY
-            if abs(a.line.fontSize - b.line.fontSize) < 0.6, d > 0, d < a.line.fontSize * 3 {
+            let d = a.line.rect.midY - b.line.rect.midY
+            if abs(a.line.fontSize - b.line.fontSize) < max(0.6, a.line.fontSize * 0.25), d > 0, d < a.line.fontSize * 3 {
                 pitches.append(d)
             }
         }
@@ -194,23 +200,43 @@ public struct PDFCleaner: Sendable {
         return Double(numeric.count) / Double(tokens.count) >= 0.6
     }
 
-    private func removeTables(_ stream: [OrderedLine], report: inout CleaningReport) -> [OrderedLine] {
-        var out: [OrderedLine] = []
-        var i = 0
-        while i < stream.count {
-            if Self.isTabular(stream[i].line.text) {
-                var j = i
-                while j < stream.count, Self.isTabular(stream[j].line.text) { j += 1 }
-                if j - i >= 2 {
-                    report.removedTableLines += j - i
-                    i = j
-                    continue
-                }
+    /// Entfernt Tabellen: Zeilen (Stücke mit gleicher `row`) gelten als Tabellenzeile bei ≥ 3 Zellen,
+    /// bei 2 sehr kurzen Zellen oder nach Textmerkmalen; erst ≥ 2 Tabellenzeilen in Folge werden entfernt.
+    private func removeTables(page: PageLayout, report: inout CleaningReport) -> PageLayout {
+        // Zeilen bilden: Stücke mit gleicher row zusammen, sonst je Stück eine Zeile.
+        var groups: [[Int]] = []
+        var byRow: [Int: Int] = [:]
+        for (i, l) in page.lines.enumerated() {
+            if l.row >= 0, let g = byRow[l.row] { groups[g].append(i) } else {
+                if l.row >= 0 { byRow[l.row] = groups.count }
+                groups.append([i])
             }
-            out.append(stream[i])
-            i += 1
         }
-        return out
+        func top(_ g: [Int]) -> CGFloat { g.map { page.lines[$0].rect.maxY }.max() ?? 0 }
+        groups.sort { top($0) > top($1) }
+        func isTableRow(_ g: [Int]) -> Bool {
+            let ls = g.map { page.lines[$0] }
+            if ls.count >= 3 { return true }
+            if ls.count == 2, ls.allSatisfy({ $0.text.count <= 18 }) { return true }
+            return ls.count == 1 && Self.isTabular(ls[0].text)
+        }
+        let flags = groups.map(isTableRow)
+        var drop = Set<Int>()
+        var i = 0
+        while i < groups.count {
+            if flags[i] {
+                var j = i
+                while j < groups.count, flags[j] { j += 1 }
+                if j - i >= 2 {
+                    for k in i..<j { for idx in groups[k] { drop.insert(idx) } }
+                    report.removedTableLines += j - i
+                }
+                i = j
+            } else { i += 1 }
+        }
+        var p = page
+        p.lines = page.lines.enumerated().filter { !drop.contains($0.offset) }.map(\.element)
+        return p
     }
 
     // MARK: - Spalten
@@ -235,7 +261,7 @@ public struct PDFCleaner: Sendable {
                 if abs(a.rect.maxY - b.rect.maxY) > 1 { return a.rect.maxY > b.rect.maxY }
                 return a.rect.minX < b.rect.minX
             }
-            return sorted.map { OrderedLine(line: $0, colLeft: minX, colWidth: span) }
+            return mergeRows(sorted.map { OrderedLine(line: $0, colLeft: minX, colWidth: span) })
         }
 
         guard lines.count >= options.minLinesPerColumn * 2, span > 100,
@@ -271,7 +297,24 @@ public struct PDFCleaner: Sendable {
             }
         }
         flush()
-        return (out, true)
+        return (mergeRows(out), true)
+    }
+
+    /// Setzt Stücke derselben PDFKit-Zeile, die in der Reihenfolge nebeneinander liegen
+    /// (zu Unrecht geteilt, z. B. weite Wortabstände im Blocksatz), wieder zusammen.
+    private func mergeRows(_ lines: [OrderedLine]) -> [OrderedLine] {
+        var out: [OrderedLine] = []
+        for o in lines {
+            if var last = out.last, o.line.row >= 0, last.line.row == o.line.row, last.line.page == o.line.page,
+               o.line.rect.minX >= last.line.rect.minX {
+                last.line.text += " " + o.line.text
+                last.line.rect = last.line.rect.union(o.line.rect)
+                out[out.count - 1] = last
+            } else {
+                out.append(o)
+            }
+        }
+        return out
     }
 
     /// Sucht eine freie senkrechte Gasse zwischen zwei Spalten. nil = einspaltig.
@@ -279,19 +322,25 @@ public struct PDFCleaner: Sendable {
         let narrow = lines.filter { $0.rect.width < span * 0.62 }
         guard narrow.count >= options.minLinesPerColumn * 2, Double(narrow.count) >= 0.6 * Double(lines.count) else { return nil }
 
-        // Überdeckte x-Intervalle der schmalen Zeilen vereinigen.
-        let intervals = narrow.map { ($0.rect.minX, $0.rect.maxX) }.sorted { $0.0 < $1.0 }
-        var merged: [(CGFloat, CGFloat)] = []
-        for iv in intervals {
-            if let last = merged.last, iv.0 <= last.1 + 2 { merged[merged.count - 1].1 = max(last.1, iv.1) } else { merged.append(iv) }
+        // Überdeckung je 2-pt-Streifen zählen; einzelne Ausreißer-Zeilen (Zierlinien, ein Zitat) sind erlaubt.
+        let bin: CGFloat = 2
+        let nBins = Int(span / bin) + 1
+        var cover = [Int](repeating: 0, count: nBins)
+        for l in narrow {
+            let a = max(0, Int((l.rect.minX - minX) / bin)), b = min(nBins - 1, Int((l.rect.maxX - minX) / bin))
+            if a <= b { for k in a...b { cover[k] += 1 } }
         }
-        // Breiteste Lücke im mittleren Bereich.
-        let lo = minX + span * 0.25, hi = minX + span * 0.75
+        let tolerance = max(1, Int(Double(narrow.count) * 0.04))
+        let lo = Int(span * 0.25 / bin), hi = Int(span * 0.75 / bin)
         var best: (CGFloat, CGFloat)? = nil
-        for (a, b) in zip(merged, merged.dropFirst()) {
-            let gap = (a.1, b.0)
-            guard gap.1 - gap.0 >= max(6, span * 0.015), gap.0 >= lo - 1, gap.1 <= hi + 1 else { continue }
-            if best == nil || gap.1 - gap.0 > best!.1 - best!.0 { best = gap }
+        var runStart: Int?
+        for k in lo...min(hi, nBins - 1) + 1 {
+            let free = k <= min(hi, nBins - 1) && cover[k] <= tolerance
+            if free { if runStart == nil { runStart = k } } else if let s0 = runStart {
+                let g = (minX + CGFloat(s0) * bin, minX + CGFloat(k) * bin)
+                if g.1 - g.0 >= max(6, span * 0.015), best == nil || g.1 - g.0 > best!.1 - best!.0 { best = g }
+                runStart = nil
+            }
         }
         guard let g = best else { return nil }
         let gutter = (g.0 + g.1) / 2
@@ -318,6 +367,7 @@ extension PDFCleaner {
         let pitch: CGFloat
         let language: String?
         let checker: WordChecker
+        let ocrPages: Set<Int>
 
         private var blocks: [TextBlock] = []
         private var captionsRemoved: [String] = []
@@ -332,9 +382,9 @@ extension PDFCleaner {
         private var joined: [String] = []
         private var kept: [String] = []
 
-        init(options: CleanerOptions, body: CGFloat, bodyIsBold: Bool, pitch: CGFloat, language: String?, checker: WordChecker) {
+        init(options: CleanerOptions, body: CGFloat, bodyIsBold: Bool, pitch: CGFloat, language: String?, checker: WordChecker, ocrPages: Set<Int>) {
             self.options = options; self.body = body; self.bodyIsBold = bodyIsBold
-            self.pitch = pitch; self.language = language; self.checker = checker
+            self.pitch = pitch; self.language = language; self.checker = checker; self.ocrPages = ocrPages
         }
 
         static let captionPattern = try! NSRegularExpression(
@@ -345,19 +395,28 @@ extension PDFCleaner {
         // Überschrift?
         private func isHeadingLine(_ l: PageLine) -> Bool {
             let t = l.text
-            guard t.count <= options.maxHeadingLength, TextHelpers.letterCount(t) >= 2 else { return false }
+            let isOCR = ocrPages.contains(l.page)
+            guard t.count <= (isOCR ? options.ocrMaxHeadingLength : options.maxHeadingLength), TextHelpers.letterCount(t) >= 2 else { return false }
             if let c = t.last, [".", ",", ";", ":"].contains(c) { return false }
-            if l.fontSize >= body * options.headingSizeRatio { return true }
+            let ratio = isOCR ? options.ocrHeadingSizeRatio : options.headingSizeRatio
+            if l.fontSize >= body * ratio { return true }
             if !bodyIsBold, l.isBold, t.count <= 90, abs(l.fontSize - body) < body * 0.15 + 0.5 { return true }
             return false
         }
 
+        /// Zweite Zeile einer Überschrift, die selbst nicht „überschriftig“ aussieht (z. B. nur Zahlen).
+        private func continuesHeading(_ l: PageLine) -> Bool {
+            guard let last = headingLast, last.line.page == l.page, abs(last.line.fontSize - l.fontSize) < 1,
+                  last.line.isBold == l.isBold, l.text.count <= options.maxHeadingLength else { return false }
+            return last.line.rect.minY - l.rect.maxY < l.fontSize * 0.8 && last.line.rect.minY > l.rect.maxY - 1
+        }
+
         mutating func add(_ o: OrderedLine) {
             let l = o.line
-            let text = l.text
+            let text = TextHelpers.stripFootnoteMarkers(l.text)
             guard !text.isEmpty else { return }
 
-            if isHeadingLine(l) {
+            if isHeadingLine(l) || continuesHeading(l) {
                 flushParagraph()
                 if let last = headingLast, last.line.page == l.page, abs(last.line.fontSize - l.fontSize) < 1,
                    last.line.rect.minY - l.rect.maxY < l.fontSize * 1.0, last.line.rect.minY > l.rect.maxY - 1 {
@@ -413,10 +472,11 @@ extension PDFCleaner {
         private func startsNewParagraph(prev: OrderedLine, cur: OrderedLine) -> Bool {
             let p = prev.line, c = cur.line
             let prevEnds = TextHelpers.endsWithTerminalPunctuation(p.text)
-            let movedAway = c.page != p.page || c.rect.maxY > p.rect.minY + 1  // Seiten- oder Spaltenwechsel
+            let movedAway = c.page != p.page || c.rect.midY > p.rect.midY + 1  // Seiten- oder Spaltenwechsel
             if movedAway { return prevEnds }
-            if abs(p.fontSize - c.fontSize) > 1.0 { return true }
-            let step = p.rect.minY - c.rect.minY
+            let sizeTolerance = ocrPages.contains(c.page) ? c.fontSize * 0.5 : 1.0  // OCR: Höhe schwankt je nach Buchstaben
+            if abs(p.fontSize - c.fontSize) > sizeTolerance { return true }
+            let step = p.rect.midY - c.rect.midY  // Mitte statt Unterkante: unempfindlich gegen Höhenschwankung (OCR)
             if step > pitch * options.paragraphPitchFactor { return true }
             let colWidth = max(cur.colWidth, 1)
             let prevShort = p.rect.width < colWidth * options.shortLineRatio

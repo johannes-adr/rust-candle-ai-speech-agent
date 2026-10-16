@@ -11,8 +11,15 @@ public struct PageLine: Sendable, Equatable {
     public var isBold: Bool
     /// 0-basierter Seitenindex.
     public var page: Int
+    /// Kennung der PDFKit-Zeile, aus der dieses Stück stammt (-1 = keine). Stücke einer
+    /// Zeile, die durch große Lücken (Spalten, Tabellenzellen) getrennt wurden, teilen sie.
+    public var row: Int
+    /// Anzahl der Stücke dieser Zeile (≥ 3 deutet auf eine Tabellenzeile).
+    public var cells: Int
 
-    public init(_ text: String, rect: CGRect, fontSize: CGFloat = 11, isBold: Bool = false, page: Int = 0) {
+    public init(_ text: String, rect: CGRect, fontSize: CGFloat = 11, isBold: Bool = false, page: Int = 0, row: Int = -1, cells: Int = 1) {
+        self.row = row
+        self.cells = cells
         self.text = text
         self.rect = rect
         self.fontSize = fontSize
