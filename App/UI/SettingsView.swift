@@ -25,6 +25,7 @@ struct SettingsView: View {
                     .disabled(model.settings.usesDefaultOutputDirectory)
                 }
             }
+            OwnVoiceSettingsSection()
             Section("settings.later.header") {
                 Text("settings.later.text").foregroundStyle(.secondary)
             }

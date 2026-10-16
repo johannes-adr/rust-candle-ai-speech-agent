@@ -12,7 +12,8 @@ struct VoiceView: View {
                 voiceCards(draft)
                 if let key = model.sampleMessage { Text(LocalizedStringKey(key)).foregroundStyle(Color.omaSecondaryText) }
 
-                Text("voice.styleQuestion").font(OmaStyle.bodyBold).padding(.top, 4)
+                OwnVoiceHonestNote()
+                Text("voice.styleQuestion").font(OmaStyle.bodyBold).padding(.top, 4).hiddenForOwnVoice()
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 250), spacing: 16)], alignment: .leading, spacing: 16) {
                     ForEach(VoiceStyle.allCases) { style in
                         ChoiceButton(
@@ -20,6 +21,7 @@ struct VoiceView: View {
                             selected: draft.style == style) { model.selectStyle(style) }
                     }
                 }
+                .hiddenForOwnVoice()
 
                 Text("voice.tempo").font(OmaStyle.bodyBold).padding(.top, 4)
                 HStack(spacing: 16) {
@@ -51,6 +53,7 @@ struct VoiceView: View {
             ForEach(voices) { voice in VoiceCard(voice: voice, selected: draft.voiceID == voice.id) }
             OwnVoiceCard()
         }
+        RecordedVoiceRow(draft: draft)
         if voices.contains(where: { !model.hasSample(voiceID: $0.id) }) {
             Text("voice.sampleSoon").foregroundStyle(Color.omaSecondaryText)
         }
