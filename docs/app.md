@@ -1,7 +1,7 @@
 # Die Mac-App (Phase 2, Oberfläche)
 
-Stand: Oberfläche ①–④ ist klickbar. Die Sprachausgabe fehlt noch: Dahinter steht eine
-**Attrappe** (siehe unten).
+Stand: Oberfläche ①–④ ist angebunden an die echte Pipeline (`LiveAudiobookService`, siehe
+`docs/phase1.md`). Die Attrappe unten gibt es nur noch als Debug-Option (`VORLESER_PREVIEW=1`).
 
 ## Aufbau
 
