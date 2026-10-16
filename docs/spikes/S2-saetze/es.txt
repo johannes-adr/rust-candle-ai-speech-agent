@@ -1,0 +1,23 @@
+# Zahlen
+En la ciudad viven 1.250.000 personas.
+El resultado fue del 3,75 por ciento.
+Nació en 1984 y se mudó a Madrid en 2019.
+La respuesta está en la página 237.
+
+# Datum und Uhrzeit
+La primera cita fue el 3/5/2024.
+La reunión empieza el 24 de diciembre a las 18:30.
+El tren sale a las 7:05 y llega a las 14:45.
+
+# Geld und Einheiten
+El libro cuesta 12,50 € y la revista 3 €.
+El coche va a 120 km/h con 21 °C.
+El paquete pesa 2,5 kg.
+
+# Abkürzungen, Telefon
+Esto vale, p. ej., para el Dr. Pérez y la Sra. López, etc.
+Llame al 912 345 678 o escriba a info@ejemplo.es.
+
+# Fremdwörter, URLs
+La reunión en la oficina fue por Zoom.
+Ella trabaja en una start-up de Barcelona.
