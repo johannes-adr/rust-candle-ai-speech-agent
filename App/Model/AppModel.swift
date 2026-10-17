@@ -295,7 +295,9 @@ final class AppModel {
             title: d.title, document: d.document, sourceHash: d.sourceHash, sourceKind: d.sourceKind,
             sourceData: d.sourceData, sourceExtension: d.sourceExtension, language: d.language,
             voiceID: voiceID, voiceName: voiceName, tempo: d.tempo.factor,
-            resumeProjectID: nil, writeChapterFiles: settings.chaptersAsFiles)
+            resumeProjectID: nil, writeChapterFiles: settings.chaptersAsFiles,
+            maxWordsPerChunk: settings.chunkWords > 0 ? settings.chunkWords : nil,
+            seed: settings.fixedSeed > 0 ? UInt64(settings.fixedSeed) : nil)
         instantPlayback = d.isShort
         AppLog.info("work", "Start: \(d.language.rawValue), \(d.document.blocks.count) Blöcke, Stimme \(voiceID), Tempo \(d.tempo.factor), Qualität \(settings.quality.rawValue)")
         run(job)
@@ -406,7 +408,8 @@ final class AppModel {
                     title: p.title, document: TextDocument(blocks: []), sourceHash: p.sourceHash,
                     sourceKind: p.sourceKind, sourceData: nil, sourceExtension: nil, language: p.language,
                     voiceID: p.voiceID, voiceName: voiceName(p.voiceID),
-                    tempo: p.tempo, resumeProjectID: p.id, writeChapterFiles: settings.chaptersAsFiles)
+                    tempo: p.tempo, resumeProjectID: p.id, writeChapterFiles: settings.chaptersAsFiles,
+                    seed: settings.fixedSeed > 0 ? UInt64(settings.fixedSeed) : nil)
                 run(job)
             }
         }

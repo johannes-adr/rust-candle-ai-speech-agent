@@ -165,6 +165,22 @@ struct QualityTab: View {
                 .labelsHidden()
                 Text("helper.tempo.info").foregroundStyle(.secondary)
             }
+            Section("helper.advanced.header") {
+                Toggle("helper.advanced.words.toggle", isOn: Binding(
+                    get: { settings.chunkWords > 0 }, set: { settings.chunkWords = $0 ? 120 : 0 }))
+                if settings.chunkWords > 0 {
+                    Stepper(value: $settings.chunkWords, in: 20...600, step: 10) {
+                        LabeledContent("helper.advanced.words.label") { Text(verbatim: "\(settings.chunkWords)") }
+                    }
+                }
+                Text("helper.advanced.words.info").foregroundStyle(.secondary)
+                Toggle("helper.advanced.seed.toggle", isOn: Binding(
+                    get: { settings.fixedSeed > 0 }, set: { settings.fixedSeed = $0 ? 42 : 0 }))
+                if settings.fixedSeed > 0 {
+                    TextField("helper.advanced.seed.label", value: $settings.fixedSeed, format: .number.grouping(.never))
+                }
+                Text("helper.advanced.seed.info").foregroundStyle(.secondary)
+            }
             SetupSettingsSection()
         }
         .formStyle(.grouped)

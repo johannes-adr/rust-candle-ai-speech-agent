@@ -37,13 +37,19 @@ public struct SynthesisRequest: Sendable {
     /// Bei Büchern mit mehreren Kapiteln zusätzlich einen Ordner mit einer MP3 je Kapitel schreiben
     /// (Einstellung „Kapitel zusätzlich als einzelne Dateien“).
     public var writeChapterFiles: Bool
+    /// Höchstzahl Wörter je Abschnitt; `nil` = Standard. Wirkt nur bei neuen Projekten.
+    public var maxWordsPerChunk: Int?
+    /// Fester Seed; `nil` = aus der Projekt-ID abgeleitet.
+    public var seed: UInt64?
 
     public init(
         title: String? = nil, source: SynthesisSource, language: Language? = nil, voice: Voice,
         style: String? = nil, tempo: Double = 1.0, outputURL: URL? = nil, resumeProjectID: UUID? = nil,
         pageCount: Int? = nil, sourceData: Data? = nil, sourceExtension: String? = nil,
-        writeChapterFiles: Bool = true
+        writeChapterFiles: Bool = true, maxWordsPerChunk: Int? = nil, seed: UInt64? = nil
     ) {
+        self.maxWordsPerChunk = maxWordsPerChunk
+        self.seed = seed
         self.title = title
         self.source = source
         self.language = language

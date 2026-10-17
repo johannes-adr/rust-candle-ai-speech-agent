@@ -108,6 +108,12 @@ public enum SourceHash {
 
 /// Deterministischer Seed je (Projekt, Abschnitt, Versuch).
 public enum SeedDerivation {
+    /// Fester Seed aus den Einstellungen: gleiche Zahl → gleiche Abschnitte, bei jedem Projekt.
+    public static func seed(base: UInt64, chunkIndex: Int, attempt: Int) -> UInt64 {
+        let digest = SHA256.hash(data: Data("seed:\(base)|\(chunkIndex)|\(attempt)".utf8))
+        return digest.prefix(8).reduce(UInt64(0)) { ($0 << 8) | UInt64($1) }
+    }
+
     public static func seed(projectID: UUID, chunkIndex: Int, attempt: Int) -> UInt64 {
         var data = Data(projectID.uuidString.lowercased().utf8)
         data.append(contentsOf: "|\(chunkIndex)|\(attempt)".utf8)

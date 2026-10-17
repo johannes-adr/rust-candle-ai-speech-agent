@@ -23,6 +23,10 @@ struct AudiobookJob: Sendable {
     var resumeProjectID: UUID?
     /// Bei mehreren Kapiteln zusätzlich eine Datei je Kapitel (Einstellung des Helfers).
     var writeChapterFiles = true
+    /// Höchstzahl Wörter je Abschnitt; `nil` = Standard (Helfer-Einstellung).
+    var maxWordsPerChunk: Int?
+    /// Fester Seed; `nil` = aus der Projekt-ID (Helfer-Einstellung).
+    var seed: UInt64?
 }
 
 struct AudiobookProgress: Sendable, Equatable {

@@ -10,14 +10,25 @@ import Foundation
 /// - Die Länge wird an der gesprochenen Form gemessen (Zahlen ausgeschrieben).
 public struct ChunkPlanner: Sendable {
     public var splitter: SentenceSplitter
+    /// Höchstzahl Wörter je Abschnitt (Helfer-Einstellung); `nil` = Standard (200–500 Zeichen).
+    public var maxWords: Int?
 
-    public init(splitter: SentenceSplitter = .init()) {
+    public init(splitter: SentenceSplitter = .init(), maxWords: Int? = nil) {
         self.splitter = splitter
+        self.maxWords = maxWords
     }
 
     /// Zielbereich in Zeichen; CJK ca. ein Drittel.
     public static func lengthRange(for language: Language) -> ClosedRange<Int> {
         language.isCJK ? 70...170 : 200...500
+    }
+
+    /// Zielbereich aus einer Wortzahl: ca. 6 Zeichen je Wort (mit Leerzeichen), CJK ca. 2 Zeichen;
+    /// untere Grenze 40 % der oberen (wie beim Standard 200…500).
+    public static func lengthRange(for language: Language, maxWords: Int?) -> ClosedRange<Int> {
+        guard let words = maxWords, words > 0 else { return lengthRange(for: language) }
+        let upper = max(language.isCJK ? 20 : 40, words * (language.isCJK ? 2 : 6))
+        return (upper * 2 / 5)...upper
     }
 
     private struct Unit {
@@ -30,7 +41,7 @@ public struct ChunkPlanner: Sendable {
         language: Language,
         normalizer: (any Normalizer)? = nil
     ) -> [Chunk] {
-        let range = Self.lengthRange(for: language)
+        let range = Self.lengthRange(for: language, maxWords: maxWords)
         let join = language.isCJK ? "" : " "
         let spokenOf: @Sendable (String) -> String = { normalizer?.normalize($0) ?? $0 }
         var chunks: [Chunk] = []

@@ -7046,6 +7046,125 @@
           }
         }
       }
+    },
+    "helper.advanced.header": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feineinstellungen"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajustes avançados"
+          }
+        }
+      }
+    },
+    "helper.advanced.words.toggle": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eigene Abschnittslänge"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comprimento próprio dos trechos"
+          }
+        }
+      }
+    },
+    "helper.advanced.words.label": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Höchstens Wörter je Abschnitt"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Máximo de palavras por trecho"
+          }
+        }
+      }
+    },
+    "helper.advanced.words.info": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Text wird in Abschnitte geteilt, die einzeln gesprochen und geprüft werden. Längere Abschnitte klingen zusammenhängender, misslingen aber eher. Standard: etwa 35–80 Wörter. Gilt für neu begonnene Hörbücher."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O texto é dividido em trechos lidos e verificados um a um. Trechos mais longos soam mais contínuos, mas falham mais facilmente. Predefinição: cerca de 35–80 palavras. Aplica-se a audiolivros novos."
+          }
+        }
+      }
+    },
+    "helper.advanced.seed.toggle": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fester Seed"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Semente fixa"
+          }
+        }
+      }
+    },
+    "helper.advanced.seed.label": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seed"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Semente"
+          }
+        }
+      }
+    },
+    "helper.advanced.seed.info": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit derselben Zahl klingt ein Abschnitt bei gleichem Text und gleicher Stimme wieder gleich. Ohne festen Seed ist er bei jedem Hörbuch anders."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Com o mesmo número, um trecho soa igual para o mesmo texto e a mesma voz. Sem semente fixa, varia em cada audiolivro."
+          }
+        }
+      }
     }
   }
 }

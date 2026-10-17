@@ -19,6 +19,8 @@ public actor SynthesisJob {
     private var paused = false
     private var cancelRequested = false
     private var unloadTask: Task<Void, Never>?
+    /// Fester Seed des laufenden Auftrags (`SynthesisRequest.seed`).
+    private var fixedSeed: UInt64?
 
     public init(engine: any SpeechEngine, store: ProjectStore, config: SynthesisConfig = .init()) {
         self.engine = engine
@@ -110,6 +112,7 @@ public actor SynthesisJob {
         // 1. Projekt bestimmen (neu oder fortsetzen).
         var project: Project
         var resumed = false
+        fixedSeed = request.seed
         var pageCount = request.pageCount
         var resolvedTitle = request.title
 
@@ -141,7 +144,9 @@ public actor SynthesisJob {
                 resumed = true
             } else {
                 out.yield(.stage(.planning))
-                let chunks = TextPreparer.prepare(document: imported.document, language: language)
+                let chunks = TextPreparer.prepare(
+                    document: imported.document, language: language,
+                    planner: ChunkPlanner(maxWords: request.maxWordsPerChunk))
                 guard !chunks.isEmpty else { throw SynthesisFailure.noText }
                 let title = resolvedTitle ?? imported.document.title ?? "Vorgelesen"
                 do {
@@ -398,7 +403,8 @@ public actor SynthesisJob {
 
         for attempt in 0...config.maxRetries {
             try checkCancelled()
-            let seed = SeedDerivation.seed(projectID: projectID, chunkIndex: chunk.index, attempt: attempt)
+            let seed = fixedSeed.map { SeedDerivation.seed(base: $0, chunkIndex: chunk.index, attempt: attempt) }
+                ?? SeedDerivation.seed(projectID: projectID, chunkIndex: chunk.index, attempt: attempt)
             outcome.attempts += 1
             outcome.lastSeed = seed
 
