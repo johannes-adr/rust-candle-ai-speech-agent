@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>de</string>
+	<key>CFBundleDisplayName</key>
+	<string>Vorleser</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>de</string>
+		<string>pt-PT</string>
+	</array>
+	<key>CFBundleName</key>
+	<string>Vorleser</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.productivity</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>26.0</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Vorleser nutzt die Kamera Ihres iPhones, um Briefe und Buchseiten zum Vorlesen zu fotografieren.</string>
+	<key>NSCameraUseContinuityCameraDeviceType</key>
+	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Vorleser nimmt Ihre Stimme auf, damit vorgelesen werden kann wie Sie sprechen.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Vorleser prüft damit, ob der Lesetext bei Ihrer Aufnahme vorgelesen wurde.</string>
+</dict>
+</plist>

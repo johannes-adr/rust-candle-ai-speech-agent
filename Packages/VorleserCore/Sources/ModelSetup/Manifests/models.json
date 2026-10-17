@@ -1,0 +1,5 @@
+{
+  "base-4bit" : { "repo" : "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-4bit", "revision" : "37e955a1deb861c088ae5f3a67043185f3d1a60c" },
+  "base-8bit" : { "repo" : "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-8bit", "revision" : "e7dd0585652209fa0d7783659aad4e8a324de11c" },
+  "voiceDesign-4bit" : { "repo" : "mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-4bit", "revision" : "5c390979e4b93af5f2932f90742ca99c7dd04687" }
+}

@@ -1,0 +1,10 @@
+[
+ {
+  "in": "In 1984, 3.5 kg cost 12 dollars, e.g. 1,000 people, 50%.",
+  "out": "In nineteen eighty-four, three point five kg cost twelve dollars, for example one thousand people, fifty percent."
+ },
+ {
+  "in": "Dr. Smith, etc.",
+  "out": "Doctor Smith, et cetera."
+ }
+]

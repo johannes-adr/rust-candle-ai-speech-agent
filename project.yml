@@ -1,0 +1,96 @@
+# XcodeGen-Beschreibung der Mac-App. `xcodegen generate` erzeugt Vorleser.xcodeproj
+# (nicht eingecheckt). Siehe PLAN.md §4.7 und docs/app.md.
+name: Vorleser
+options:
+  bundleIdPrefix: de.vorleser
+  createIntermediateGroups: true
+  deploymentTarget:
+    macOS: "26.0"
+  developmentLanguage: de
+
+packages:
+  VorleserCore:
+    path: Packages/VorleserCore
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    # Nur Apple Silicon: MLX läuft nicht auf Intel, ein Universal-Build kostet nur Bauzeit.
+    ARCHS: arm64
+    # Signieren: leer = "Sign to Run Locally" (ad hoc). Mit dem kostenlosen Personal Team
+    # bleibt die Mikrofon-Erlaubnis über Neubauten erhalten:
+    #   VORLESER_TEAM=ABCDE12345 scripts/install.sh
+    # (install.sh reicht das Team an xcodebuild weiter) oder in Xcode unter
+    # Signing & Capabilities wählen. Kein Sandbox, kein Hardened Runtime.
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    CODE_SIGN_IDENTITY: "-"
+    ENABLE_HARDENED_RUNTIME: NO
+    ENABLE_APP_SANDBOX: NO
+
+targets:
+  Vorleser:
+    type: application
+    platform: macOS
+    sources:
+      - path: App
+        excludes:
+          - "Info.plist"
+      # Als Ordner eingebunden, damit ReadAloud/ im App-Paket erhalten bleibt.
+      - path: Resources/ReadAloud
+        type: folder
+        buildPhase: resources
+    dependencies:
+      - package: VorleserCore
+        product: DocumentImport
+      - package: VorleserCore
+        product: TextPrep
+      - package: VorleserCore
+        product: AudioOut
+      - package: VorleserCore
+        product: Projects
+      - package: VorleserCore
+        product: VorleserSpeech
+      - package: VorleserCore
+        product: ModelSetup
+      - package: VorleserCore
+        product: Pipeline
+      - package: VorleserCore
+        product: VoiceCapture
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Vorleser
+        CFBundleName: Vorleser
+        CFBundleDevelopmentRegion: de
+        CFBundleLocalizations: [de, pt-PT]
+        LSApplicationCategoryType: public.app-category.productivity
+        LSMinimumSystemVersion: "26.0"
+        # Die sichtbaren Texte stehen in App/InfoPlist.xcstrings (de, pt-PT).
+        NSMicrophoneUsageDescription: Vorleser nimmt Ihre Stimme auf, damit vorgelesen werden kann wie Sie sprechen.
+        NSSpeechRecognitionUsageDescription: Vorleser prüft damit, ob der Lesetext bei Ihrer Aufnahme vorgelesen wurde.
+        NSCameraUsageDescription: Vorleser nutzt die Kamera Ihres iPhones, um Briefe und Buchseiten zum Vorlesen zu fotografieren.
+        # Ohne diesen Schlüssel meldet macOS das iPhone nur als „externe Kamera“ (Continuity Camera, App/Camera).
+        NSCameraUseContinuityCameraDeviceType: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: de.vorleser.app
+        PRODUCT_NAME: Vorleser
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+    scheme:
+      testTargets:
+        - VorleserTests
+
+  VorleserTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: App-Tests
+    dependencies:
+      - target: Vorleser
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: de.vorleser.app.tests
+        GENERATE_INFOPLIST_FILE: YES
